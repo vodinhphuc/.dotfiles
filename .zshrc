@@ -130,7 +130,7 @@ source $ZSH/oh-my-zsh.sh
 # alias zshconfig="mate ~/.zshrc"
 # alias ohmyzsh="mate ~/.oh-my-zsh"
 
-# >>> conda initialize >>>
+# conda initialize 
 # !! Contents within this block are managed by 'conda init' !!
 __conda_setup="$('/home/phucvd/miniconda3/bin/conda' 'shell.bash' 'hook' 2> /dev/null)"
 if [ $? -eq 0 ]; then
@@ -143,26 +143,25 @@ else
     fi
 fi
 unset __conda_setup
-# <<< conda initialize <<<
 
-# >>>> Maven >>>>
+# Maven
 M2_HOME=/opt/apache-maven-3.9.0
 PATH="$M2_HOME/bin:$PATH"
 export PATH
-# <<<< Maven <<<<<
 
 alias w-c="warp-cli connect"
 alias w-d="warp-cli disconnect"
-# <<<< WARP alias <<<<
+
 alias ll="ls -la"
 
-# >>>>>>>>>>>>> GOLANG >>>>>>>>>>>>>>
+# GOLANG 
 export GOPATH=$HOME/go
 export PATH=$PATH:/usr/local/go/bin:$GOPATH/bin
-#<<<<<<<<<<<<<< GOLANG <<<<<<<<<<<<<<
 
 
-# >>>>>>>>>>>>> KAFKA PLAYGROUND >>>>>>>>>>>
+# KAFKA PLAYGROUND 
 export PATH=$PATH:/home/phucvd/learning_spaces/kafka-docker-playground/scripts/cli
 source /home/phucvd/learning_spaces/kafka-docker-playground/scripts/cli/completions.bash
-# <<<<<<<<<<<<< KAFKA PLAYGROUND <<<<<<<<<<<
+
+# Tmux powerlevel10k support
+alias tmux="TERM=xterm-256color tmux"
