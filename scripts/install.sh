@@ -38,8 +38,9 @@ for f in scripts/programs/*.sh; do bash "$f" -H; done
 sudo apt upgrade -y
 sudo apt autoremove -y
 
-# Install Ohmyzsh
+# Install Oh My Zsh
 sh -c "$(curl -fsSL https://raw.githubusercontent.com/ohmyzsh/ohmyzsh/master/tools/install.sh)"
+git clone --depth=1 https://github.com/romkatv/powerlevel10k.git ~/.oh-my-zsh/custom/themes/powerlevel10k
 
 # config git
 git config --global user.email "phucvd2512@gmail.com"
