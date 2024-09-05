@@ -160,8 +160,8 @@ export PATH=$PATH:/usr/local/go/bin:$GOPATH/bin
 
 
 # KAFKA PLAYGROUND 
-export PATH=$PATH:/home/phucvd/learning_spaces/kafka-docker-playground/scripts/cli
-source /home/phucvd/learning_spaces/kafka-docker-playground/scripts/cli/completions.bash
+#export PATH=$PATH:/home/phucvd/learning_spaces/kafka-docker-playground/scripts/cli
+#source /home/phucvd/learning_spaces/kafka-docker-playground/scripts/cli/completions.bash
 
 # Tmux powerlevel10k support
 alias tmux="TERM=xterm-256color tmux"
