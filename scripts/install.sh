@@ -29,6 +29,7 @@ install tree
 install vim
 install wget
 install tmux
+install zsh
 
 # Run all scripts in programs/
 for f in scripts/programs/*.sh; do bash "$f" -H; done
@@ -36,3 +37,6 @@ for f in scripts/programs/*.sh; do bash "$f" -H; done
 # Get all upgrades
 sudo apt upgrade -y
 sudo apt autoremove -y
+
+# Install Ohmyzsh
+sh -c "$(curl -fsSL https://raw.githubusercontent.com/ohmyzsh/ohmyzsh/master/tools/install.sh)"
