@@ -40,3 +40,8 @@ sudo apt autoremove -y
 
 # Install Ohmyzsh
 sh -c "$(curl -fsSL https://raw.githubusercontent.com/ohmyzsh/ohmyzsh/master/tools/install.sh)"
+
+# config git
+git config --global user.email "phucvd2512@gmail.com"
+git config --global user.name "vodinhphuc"
+
