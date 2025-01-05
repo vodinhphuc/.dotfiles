@@ -6,6 +6,6 @@ if [ ! -d "~/.tmux/plugins/tpm" ]; then
   mkdir -p ~/.tmux/plugins
   git clone https://github.com/tmux-plugins/tpm ~/.tmux/plugins/tpm
 else
-  echo "Already installed: ${1}"
+  echo "Already installed: existed: ~/.tmux/plugins/tpm"
 fi
 
