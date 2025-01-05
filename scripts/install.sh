@@ -21,6 +21,7 @@ function install {
 install stow
 # Create symlinks for config
 cd ..
+echo "Current working directory is: $(pwd)"
 stow .
 
 # Basics
@@ -40,14 +41,14 @@ cd $cwd
 echo "Current working directory is: $(pwd)"
 
 # Run all scripts in programs/
+chmod u+x scripts/programs/*
 for f in scripts/programs/*.sh; do bash "$f" -H; done
 
 # Get all upgrades
 sudo apt upgrade -y
 sudo apt autoremove -y
 
-# Install Oh My Zsh
-sh -c "$(curl -fsSL https://raw.githubusercontent.com/ohmyzsh/ohmyzsh/master/tools/install.sh)"
+echo "Intall Oh My Zsh..."
 git clone --depth=1 https://github.com/romkatv/powerlevel10k.git ~/.oh-my-zsh/custom/themes/powerlevel10k
 
 # config git
