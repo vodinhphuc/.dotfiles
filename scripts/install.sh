@@ -1,5 +1,8 @@
 #!/bin/bash
 
+echo "Current working directory is: $(pwd)"
+cwd=$(pwd)
+
 # Update Ubuntu and get standard repository programs
 sudo apt update && sudo apt full-upgrade -y
 
@@ -30,6 +33,11 @@ install vim
 install wget
 install tmux
 install zsh
+
+echo "Current working directory is: $(pwd)"
+echo "cd $cwd"
+cd $cwd
+echo "Current working directory is: $(pwd)"
 
 # Run all scripts in programs/
 for f in scripts/programs/*.sh; do bash "$f" -H; done
