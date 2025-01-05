@@ -1,5 +1,15 @@
 #!/bin/bash
 
+echo "Installing: ${1}..."
+which docker &> /dev/null
+
+if [ $? -ne 0 ]; then
+  sudo apt install -y $1
+else
+  echo "Already installed: ${1}"
+  exit
+fi
+
 echo "🐋 Installing Docker"
 sudo apt update
 sudo apt-get install -y \
