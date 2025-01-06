@@ -48,7 +48,10 @@ for f in scripts/programs/*.sh; do bash "$f" -H; done
 sudo apt upgrade -y
 sudo apt autoremove -y
 
-echo "Intall Oh My Zsh..."
+# Install Antigent
+curl -L git.io/antigen > ~/antigen.zsh
+
+echo "Intall powerlevel10k..."
 git clone --depth=1 https://github.com/romkatv/powerlevel10k.git ~/.oh-my-zsh/custom/themes/powerlevel10k
 
 # config git
