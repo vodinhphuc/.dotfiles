@@ -1,4 +1,4 @@
-source ~/antigen.zsh
+source ~/.antigen.zsh
 
 antigen use oh-my-zsh
 
@@ -13,7 +13,7 @@ antigen bundle sudo
 antigen bundle zsh-users/zsh-completions
 antigen bundle zsh-users/zsh-autosuggestions
 antigen bundle zsh-users/zsh-syntax-highlighting
-antigen bundle conda-incubator/conda-zsh-completion
+# antigen bundle conda-incubator/conda-zsh-completion
 # Tell Antigen that you're done.
 antigen apply
 
@@ -100,7 +100,10 @@ ZSH_THEME="powerlevel10k/powerlevel10k"
 # Custom plugins may be added to $ZSH_CUSTOM/plugins/
 # Example format: plugins=(rails git textmate ruby lighthouse)
 # Add wisely, as too many plugins slow down shell startup.
-plugins=(git)
+plugins=(
+            git
+            conda-zsh-completion
+        )
 
 source $ZSH/oh-my-zsh.sh
 

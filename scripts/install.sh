@@ -19,7 +19,7 @@ function install {
 # Install dotfiles manager
 install stow
 # Create symlinks for config
-cd ..
+cd ~/dotfiles
 echo "Current working directory is: $(pwd)"
 stow .
 
