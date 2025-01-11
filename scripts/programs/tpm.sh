@@ -1,15 +1,13 @@
 #!/bin/bash
+# Define the directory where tmux plugins will be stored
+PLUGIN_DIR=~/.tmux/plugins
+TPM_DIR=$PLUGIN_DIR/tpm
 
-if [ ! -d ~/.tmux/plugins ]; then
+if [ ! -d "$TPM_DIR" ]; then
     echo "Installing Tmux plugins manager"
-	echo "Create new folder for tmux plugins"
-	mkdir -p ~/.tmux/plugins
-	git clone https://github.com/tmux-plugins/tpm ~/.tmux/plugins/tpm
-
-elif [ ! -d ~/.tmux/plugins/tpm ]; then
-	echo "Cloning tpm to ~/.tmux/plugins"
-	git clone https://github.com/tmux-plugins/tpm ~/.tmux/plugins/tpm
+    echo "Creating folder for tmux plugins"
+    mkdir -p "$PLUGIN_DIR"
+    git clone https://github.com/tmux-plugins/tpm "$TPM_DIR"
 else
-  echo "Already installed: ~/.tmux/plugins/tpm"
+    echo "Already installed: $TPM_DIR"
 fi
-
