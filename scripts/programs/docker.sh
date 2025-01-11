@@ -1,8 +1,6 @@
 #!/bin/bash
 
-which docker &> /dev/null
-
-if [ $? -ne 0 ]; then
+if ! command -v docker &> /dev/null; then
   echo "🐋 Installing Docker"
   sudo apt-get install -y \
       apt-transport-https \

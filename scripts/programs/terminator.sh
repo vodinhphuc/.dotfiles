@@ -2,7 +2,7 @@
 
 which terminator &> /dev/null
 
-if [ $? -ne 0 ]; then
+if ! command -v terminator &> /dev/null; then
   echo "Installing Terminator..."
   sudo apt install terminator
   sudo update-alternatives --install /usr/bin/x-terminal-emulator x-terminal-emulator /usr/bin/terminator 50
