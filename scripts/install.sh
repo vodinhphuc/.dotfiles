@@ -33,7 +33,7 @@ install vim
 install wget
 install tmux
 install zsh
-
+install nvtop
 cd $cwd
 # Run all scripts in programs/
 chmod u+x scripts/programs/*
