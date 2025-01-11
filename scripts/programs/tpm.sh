@@ -1,18 +1,15 @@
 #!/bin/bash
 
-echo "Installing Tmux plugins manager"
-
-PLUGIN_DIR="~/.tmux/plugins"
-TPM_DIR="~/.tmux/plugins/tpm"
-
-if [ ! -d "$PLUGIN_DIR" ]; then
+if [ ! -d ~/.tmux/plugins ]; then
+    echo "Installing Tmux plugins manager"
 	echo "Create new folder for tmux plugins"
 	mkdir -p ~/.tmux/plugins
 	git clone https://github.com/tmux-plugins/tpm ~/.tmux/plugins/tpm
-elif [ ! -d "~/.tmux/plugins/tpm" ]; then
-	echo "Cloning tmp to ~/.tmux/plugins"
+
+elif [ ! -d ~/.tmux/plugins/tpm ]; then
+	echo "Cloning tpm to ~/.tmux/plugins"
 	git clone https://github.com/tmux-plugins/tpm ~/.tmux/plugins/tpm
 else
-  echo "Already installed: existed: ~/.tmux/plugins/tpm"
+  echo "Already installed: ~/.tmux/plugins/tpm"
 fi
 

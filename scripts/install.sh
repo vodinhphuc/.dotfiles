@@ -7,14 +7,13 @@ cwd=$(pwd)
 sudo apt update && sudo apt full-upgrade -y
 
 function install {
-  which $1 &> /dev/null
-
-  if [ $? -ne 0 ]; then
-    echo "Installing: ${1}..."
-    sudo apt install -y $1
-  else
-    echo "Already installed: ${1}"
-  fi
+    which $1 &> /dev/null
+    if [ $? -ne 0 ]; then
+        echo "Installing: ${1}..."
+        sudo apt install -y $1
+    else
+        echo "Already installed: ${1}"
+    fi
 }
 
 # Install dotfiles manager
@@ -35,19 +34,7 @@ install wget
 install tmux
 install zsh
 
-echo "Current working directory is: $(pwd)"
-echo "cd $cwd"
 cd $cwd
-echo "Current working directory is: $(pwd)"
-
-echo "Install Antigent"
-curl -L git.io/antigen > ~/antigen.zsh
-
-if [ ! -f ~/.oh-my-zsh/custom/themes/powerlevel10k ]; then
-  echo "Intall powerlevel10k..."
-  git clone --depth=1 https://github.com/romkatv/powerlevel10k.git ~/.oh-my-zsh/custom/themes/powerlevel10k
-fi
-
 # Run all scripts in programs/
 chmod u+x scripts/programs/*
 for f in scripts/programs/*.sh; do bash "$f" -H; done
@@ -55,5 +42,3 @@ for f in scripts/programs/*.sh; do bash "$f" -H; done
 # Get all upgrades
 sudo apt upgrade -y
 sudo apt autoremove -y
-
-

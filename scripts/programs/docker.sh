@@ -1,6 +1,5 @@
 #!/bin/bash
 
-echo "Installing: docker..."
 which docker &> /dev/null
 
 if [ $? -ne 0 ]; then

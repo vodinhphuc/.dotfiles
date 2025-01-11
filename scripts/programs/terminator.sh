@@ -1,6 +1,5 @@
 #!/bin/bash
 
-echo "Installing: terminator..."
 which terminator &> /dev/null
 
 if [ $? -ne 0 ]; then
