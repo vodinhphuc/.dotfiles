@@ -130,20 +130,6 @@ source $ZSH/oh-my-zsh.sh
 # alias zshconfig="mate ~/.zshrc"
 # alias ohmyzsh="mate ~/.oh-my-zsh"
 
-# conda initialize 
-# !! Contents within this block are managed by 'conda init' !!
-__conda_setup="$('/home/phucvd/miniconda3/bin/conda' 'shell.bash' 'hook' 2> /dev/null)"
-if [ $? -eq 0 ]; then
-    eval "$__conda_setup"
-else
-    if [ -f "/home/phucvd/miniconda3/etc/profile.d/conda.sh" ]; then
-        . "/home/phucvd/miniconda3/etc/profile.d/conda.sh"
-    else
-        export PATH="/home/phucvd/miniconda3/bin:$PATH"
-    fi
-fi
-unset __conda_setup
-
 # Maven
 M2_HOME=/opt/apache-maven-3.9.0
 PATH="$M2_HOME/bin:$PATH"
@@ -165,3 +151,6 @@ export PATH=$PATH:/usr/local/go/bin:$GOPATH/bin
 
 # Tmux powerlevel10k support
 alias tmux="TERM=xterm-256color tmux"
+
+# miniconda activate conda after install
+source ~/miniconda3/bin/activate
