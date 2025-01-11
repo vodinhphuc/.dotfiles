@@ -7,8 +7,7 @@ cwd=$(pwd)
 sudo apt update && sudo apt full-upgrade -y
 
 function install {
-    which $1 &> /dev/null
-    if [ $? -ne 0 ]; then
+    if ! command -v $1 &> /dev/null; then
         echo "Installing: ${1}..."
         sudo apt install -y $1
     else
@@ -18,6 +17,7 @@ function install {
 
 # Install dotfiles manager
 install stow
+
 # Create symlinks for config
 cd ~/dotfiles
 echo "Current working directory is: $(pwd)"
@@ -34,10 +34,14 @@ install wget
 install tmux
 install zsh
 install nvtop
+
 cd $cwd
+
 # Run all scripts in programs/
-chmod u+x scripts/programs/*
-for f in scripts/programs/*.sh; do bash "$f" -H; done
+chmod u+x scripts/programs/*.sh
+for script in scripts/programs/*.sh; do
+    bash "$script" -H
+done
 
 # Get all upgrades
 sudo apt upgrade -y
