@@ -34,6 +34,7 @@ install wget
 install tmux
 install zsh
 install nvtop
+install ibus-unikey
 
 cd $cwd
 
