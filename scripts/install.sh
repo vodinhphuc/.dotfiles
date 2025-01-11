@@ -44,17 +44,21 @@ echo "Current working directory is: $(pwd)"
 chmod u+x scripts/programs/*
 for f in scripts/programs/*.sh; do bash "$f" -H; done
 
+echo "Install Antigent"
+curl -L git.io/antigen > ~/antigen.zsh
+# or use git.io/antigen-nightly for the latest version
+
+if [ ! -f ~/.oh-my-zsh/custom/themes/powerlevel10k ]; then
+  echo "Intall powerlevel10k..."
+  git clone --depth=1 https://github.com/romkatv/powerlevel10k.git ~/.oh-my-zsh/custom/themes/powerlevel10k
+fi
+
+echo "Config git"
+git config --global user.email "phucvd2512@gmail.com"
+git config --global user.name "vodinhphuc"
+
 # Get all upgrades
 sudo apt upgrade -y
 sudo apt autoremove -y
 
-# Install Antigent
-curl -L git.io/antigen > ~/antigen.zsh
-
-echo "Intall powerlevel10k..."
-git clone --depth=1 https://github.com/romkatv/powerlevel10k.git ~/.oh-my-zsh/custom/themes/powerlevel10k
-
-# config git
-git config --global user.email "phucvd2512@gmail.com"
-git config --global user.name "vodinhphuc"
 
