@@ -21,6 +21,8 @@ install stow
 # Create symlinks for config
 cd ~/dotfiles
 echo "Current working directory is: $(pwd)"
+# move already ~/.bashrc to use customize file
+mv ~/.bashrc ~/.bashrc.bk
 stow .
 
 # Basics
@@ -32,7 +34,11 @@ install tree
 install vim
 install wget
 install tmux
+
+# use zsh
 install zsh
+chsh -s /usr/bin/zsh
+
 install nvtop
 install ibus-unikey
 
