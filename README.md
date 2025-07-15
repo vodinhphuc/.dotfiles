@@ -4,8 +4,7 @@ Reproduce my ubuntu environment setting automate
 
 # What?
 
-Use stow:
-https://dev.to/vvidovic/set-up-your-new-machine-in-a-blink-of-an-eye-43j7
+Use stow and scripts to auto install new Ubuntu environment
 
 # How?
 0. Install & setup git:
@@ -41,3 +40,8 @@ cd ~/.dotfiles && chmod u+x scripts/install.sh
 ```bash
 cd ~/.dotfiles && bash scripts/install.sh
 ```
+
+# References
+1. https://medium.com/@satriajanaka09/setup-zsh-oh-my-zsh-powerlevel10k-on-ubuntu-20-04-c4a4052508fd
+2. https://gist.github.com/codedeep79/cd473b24559342872311ad99fedaf551
+3. https://dev.to/vvidovic/set-up-your-new-machine-in-a-blink-of-an-eye-43j7
