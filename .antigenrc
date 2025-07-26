@@ -7,7 +7,7 @@ antigen bundle pip
 antigen bundle command-not-found
 antigen bundle docker
 # use the j autojump directory function
-antigen bundle autojump
+# antigen bundle autojump
 
 # a plugin to remind me that I set up an alias for that command!
 antigen bundle djui/alias-tips
