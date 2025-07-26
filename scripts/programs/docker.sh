@@ -16,6 +16,8 @@ if ! command -v docker &> /dev/null; then
   sudo apt update
   sudo apt install -y docker-ce docker-ce-cli containerd.io
   sudo docker run hello-world
+  # Add current user to docker group to run docker with current user without root permission
+  sudo usermod -aG docker $USER
 
 else
   echo "Already installed: docker"
