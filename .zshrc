@@ -142,6 +142,6 @@ alias tmux="TERM=xterm-256color tmux"
 
 # miniconda activate conda after install
 # source ~/miniconda3/bin/activate
-
+export PATH=$PATH:~/miniconda3/bin
 # To customize prompt, run `p10k configure` or edit ~/.p10k.zsh.
 [[ ! -f ~/.p10k.zsh ]] || source ~/.p10k.zsh
