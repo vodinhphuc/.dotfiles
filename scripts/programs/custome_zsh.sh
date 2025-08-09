@@ -11,6 +11,9 @@ fi
 if [ ! -f ~/.antigen.zsh ]; then
     echo "Install Antigen..."
     curl -L git.io/antigen > ~/.antigen.zsh
+    # Create cache and completions dir and add to $fpath to fix: https://github.com/ohmyzsh/ohmyzsh/issues/11866
+    mkdir -p "$ZSH_CACHE_DIR/completions"
+    (( ${fpath[(Ie)"$ZSH_CACHE_DIR/completions"]} )) || fpath=("$ZSH_CACHE_DIR/completions" $fpath)
 else
     echo "Already installed: ~/.antigen.zsh"
 fi
