@@ -14,7 +14,7 @@ if ! command -v docker &> /dev/null; then
      $(lsb_release -cs) \
      stable"
   sudo apt update
-  sudo apt install -y docker-ce docker-ce-cli containerd.io
+  sudo snap install docker
   sudo docker run hello-world
   # Add current user to docker group to run docker with current user without root permission
   sudo usermod -aG docker $USER
