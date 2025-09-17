@@ -1,4 +1,4 @@
-source ~/.antigen.zsh     
+source $HOME/.antigen.zsh
 antigen init ~/.antigenrc  
   
 # add aliases from my alias file  
