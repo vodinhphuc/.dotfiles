@@ -1,1 +1,4 @@
 conda-zsh-completion
+.install_state
+.install_errors
+.install.log
