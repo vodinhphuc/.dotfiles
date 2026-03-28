@@ -60,7 +60,7 @@ function install_base {
     for pkg in chrome-gnome-shell curl git htop tree vim wget tmux zsh nvtop ibus-unikey; do
         install_pkg "$pkg"
     done
-    chsh -s /usr/bin/zsh
+    [ "$SHELL" = "/usr/bin/zsh" ] || chsh -s /usr/bin/zsh
 }
 
 function print_summary {
