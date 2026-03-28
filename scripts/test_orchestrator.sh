@@ -4,7 +4,7 @@
 
 set -uo pipefail
 
-DOTFILES_DIR="$(cd "$(dirname "$0")/.." && pwd)"
+DOTFILES_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 PASS=0
 FAIL=0
 
@@ -50,7 +50,7 @@ assert_file_not_contains() {
 # --- Setup: override state file paths and source functions ---
 
 TEST_DIR="$(mktemp -d)"
-trap "rm -rf $TEST_DIR" EXIT
+trap 'rm -rf "$TEST_DIR"' EXIT
 
 export STATE_FILE="$TEST_DIR/.install_state"
 export ERRORS_FILE="$TEST_DIR/.install_errors"
