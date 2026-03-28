@@ -1,24 +1,11 @@
 #!/bin/bash
+set -euo pipefail
 
-if ! command -v docker &> /dev/null; then
-  echo "🐋 Installing Docker"
-  sudo apt-get install -y \
-      apt-transport-https \
-      ca-certificates \
-      curl \
-      gnupg-agent \
-      software-properties-common
-  curl -fsSL https://download.docker.com/linux/ubuntu/gpg | sudo apt-key add -
-  sudo add-apt-repository \
-     "deb [arch=amd64] https://download.docker.com/linux/ubuntu \
-     $(lsb_release -cs) \
-     stable"
-  sudo apt update
-  sudo snap install docker
-  sudo docker run hello-world
-  # Add current user to docker group to run docker with current user without root permission
-  sudo usermod -aG docker $USER
-
+if ! command -v docker &>/dev/null; then
+    echo "Installing Docker..."
+    sudo snap install docker
+    sudo usermod -aG docker "$USER"
+    echo "Docker installed. Log out and back in for group membership to take effect."
 else
-  echo "Already installed: docker"
+    echo "Already installed: docker"
 fi
