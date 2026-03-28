@@ -1,11 +1,16 @@
 #!/bin/bash
+set -euo pipefail
 
-if [ ! -d ~/miniconda3 ]; then
-    echo "Installing miniconda3..."
-	mkdir -p ~/miniconda3
-	wget https://repo.anaconda.com/miniconda/Miniconda3-latest-Linux-x86_64.sh -O ~/miniconda3/miniconda.sh
-	bash ~/miniconda3/miniconda.sh -b -u -p ~/miniconda3
-	rm ~/miniconda3/miniconda.sh
+MINICONDA_DIR="${HOME}/miniconda3"
+
+if [ ! -d "$MINICONDA_DIR" ]; then
+    echo "Installing Miniconda3..."
+    ARCH="$(uname -m)"
+    INSTALLER="${MINICONDA_DIR}/miniconda.sh"
+    mkdir -p "$MINICONDA_DIR"
+    curl -fsSL "https://repo.anaconda.com/miniconda/Miniconda3-latest-Linux-${ARCH}.sh" -o "$INSTALLER"
+    bash "$INSTALLER" -b -u -p "$MINICONDA_DIR"
+    rm "$INSTALLER"
 else
-	echo "Already installed: miniconda3"
+    echo "Already installed: miniconda3"
 fi
