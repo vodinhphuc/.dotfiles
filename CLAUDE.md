@@ -30,9 +30,8 @@ bash scripts/programs/<script>.sh
 - `docker.sh` — Docker via snap, adds user to docker group
 - `miniconda.sh` — Miniconda3 to `~/miniconda3`
 - `tpm.sh` — Tmux Plugin Manager to `~/.tmux/plugins/tpm`
-- `terminator.sh` — writes Terminator terminal config
+- `terminator.sh` — installs Terminator and writes config
 - `visual_code.sh` — VS Code via snap
-- `cloudflare-warp.sh` — Cloudflare WARP client
 
 ## Adding New Programs
 
