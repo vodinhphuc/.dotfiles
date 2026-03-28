@@ -128,6 +128,8 @@ assert_output_not_contains "terminator.sh does not say 'Already installed' when 
 echo ""
 echo "=== terminator.sh: writes config when terminator is installed ==="
 mock_cmd terminator
+mock_cmd update-alternatives
+mock_cmd gsettings
 MOCK_HOME="$TEST_DIR/home_term_present"
 mkdir -p "$MOCK_HOME"
 output=$(PATH="$BIN_DIR:$PATH" HOME="$MOCK_HOME" bash "$DOTFILES_DIR/scripts/programs/terminator.sh" 2>&1)

@@ -30,3 +30,9 @@ cat > "${HOME}/.config/terminator/config" << 'EOF'
 [plugins]
 EOF
 echo "Terminator config written."
+
+# Set terminator as default terminal (Ctrl+Alt+T)
+sudo update-alternatives --install /usr/bin/x-terminal-emulator x-terminal-emulator /usr/bin/terminator 50
+sudo update-alternatives --set x-terminal-emulator /usr/bin/terminator
+gsettings set org.gnome.desktop.default-applications.terminal exec /usr/bin/terminator
+gsettings set org.gnome.desktop.default-applications.terminal exec-arg "-x"
