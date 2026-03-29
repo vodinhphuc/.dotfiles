@@ -21,6 +21,9 @@ antigen bundle hcgraf/zsh-sudo
 # colored man pages
 antigen bundle ael-code/zsh-colored-man-pages
 
+# Conda tab completion
+antigen bundle esc/conda-zsh-completion
+
 # Load the theme.
 antigen theme romkatv/powerlevel10k
 
