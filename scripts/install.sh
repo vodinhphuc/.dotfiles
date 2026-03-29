@@ -57,7 +57,7 @@ function fix_system {
 
 function install_base {
     echo "[BASE] Installing base packages..."
-    for pkg in chrome-gnome-shell curl git htop tree vim wget tmux zsh nvtop ibus-unikey; do
+    for pkg in chrome-gnome-shell curl htop tree vim wget tmux zsh nvtop; do
         install_pkg "$pkg"
     done
     [ "$SHELL" = "/usr/bin/zsh" ] || chsh -s /usr/bin/zsh
