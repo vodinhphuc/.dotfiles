@@ -27,8 +27,9 @@ else
     echo "Already installed: powerlevel10k"
 fi
 
-# Create oh-my-zsh completions cache dir used by the docker plugin
+# Create oh-my-zsh completions cache dirs used by the docker plugin
 # https://github.com/ohmyzsh/ohmyzsh/issues/11866
+mkdir -p "${HOME}/.oh-my-zsh/cache/completions"
 mkdir -p "${HOME}/.antigen/bundles/robbyrussell/oh-my-zsh/cache/completions"
 
 # conda-zsh-completion plugin
