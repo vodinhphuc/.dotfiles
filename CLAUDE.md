@@ -1,42 +1,73 @@
 # CLAUDE.md
 
-This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
+Guidance for Claude Code when working in this repository.
 
-## Purpose
+## What this repo does
 
-This repo automates setting up a Ubuntu environment using [GNU Stow](https://www.gnu.org/software/stow/) for symlink management and shell scripts for program installation.
+Automates setting up a Ubuntu desktop environment. GNU Stow manages dotfile symlinks; shell scripts handle program installation.
 
-## Setup Commands
+## Key commands
 
 ```bash
-# Full environment install (run from ~/.dotfiles)
+# Full install (run from ~/.dotfiles on a fresh or existing machine)
 bash scripts/install.sh
 
-# Manually apply/refresh stow symlinks (from ~/.dotfiles)
+# Re-apply stow symlinks after adding a new dotfile
 stow .
 
-# Run a single program install script
-bash scripts/programs/<script>.sh
+# Run a single program script in isolation
+bash scripts/programs/<name>.sh
+
+# Run all tests (no sudo, no network)
+bash scripts/test_programs.sh
+bash scripts/test_orchestrator.sh
 ```
 
 ## Architecture
 
-**Stow-managed dotfiles**: The repo root acts as a stow package. Running `stow .` from `~/.dotfiles` creates symlinks in `~/` mirroring the repo structure. Any config files added to the repo root will be symlinked to the home directory.
+### Stow symlinks
 
-**`scripts/install.sh`**: Entry point. Runs `apt update/upgrade`, installs stow, runs `stow .`, installs base packages (zsh, curl, vim, tmux, etc.), then iterates over all `scripts/programs/*.sh` scripts.
+The repo root is a stow package. `stow .` creates symlinks in `~/` that mirror the repo's directory structure. `scripts/install.sh` runs `stow --adopt . && git checkout .` to handle pre-existing files without clobbering them.
 
-**`scripts/programs/`**: Individual idempotent install scripts, each guarded with `command -v` or directory existence checks. Current scripts:
-- `custome_zsh.sh` — oh-my-zsh, antigen, powerlevel10k theme, conda-zsh-completion plugin
-- `docker.sh` — Docker via snap, adds user to docker group
-- `miniconda.sh` — Miniconda3 to `~/miniconda3`
-- `tpm.sh` — Tmux Plugin Manager to `~/.tmux/plugins/tpm`
-- `terminator.sh` — installs Terminator and writes config
-- `visual_code.sh` — VS Code via snap
+### `scripts/install.sh`
 
-## Adding New Programs
+Orchestrator. Runs once on a fresh machine (or resumes after failure):
 
-Create a new `scripts/programs/<name>.sh` with an idempotency guard (check if already installed before running). It will be picked up automatically by `install.sh`.
+1. `apt update && apt full-upgrade`
+2. Install `stow`, apply symlinks
+3. Install base packages (`zsh`, `curl`, `vim`, `tmux`, …)
+4. Loop over `scripts/programs/*.sh`, running each via `run_step`
 
-## Adding New Dotfiles
+State is persisted in `.install_state` (completed steps), `.install_errors` (failed steps), and `.install.log` (full output). Re-running skips completed steps.
 
-Place config files in the repo root mirroring the path relative to `~/`, then re-run `stow .` to create the symlink.
+### `scripts/programs/`
+
+Idempotent per-program scripts. Each script must:
+- Guard with `command -v`, `dpkg -l`, or a directory existence check before installing
+- Print `"Already installed: <name>"` when skipping
+- Use `sudo apt-get install -y` or `sudo snap install`
+
+Current scripts:
+
+| Script | Installs |
+|---|---|
+| `custome_zsh.sh` | oh-my-zsh, antigen, powerlevel10k, conda-zsh-completion |
+| `docker.sh` | Docker (snap), adds user to `docker` group |
+| `ibus_unikey.sh` | ibus, ibus-unikey, configures GNOME input sources |
+| `miniconda.sh` | Miniconda3 to `~/miniconda3` |
+| `terminator.sh` | Terminator, sets as default terminal (Ctrl+Alt+T) |
+| `tpm.sh` | Tmux Plugin Manager |
+| `visual_code.sh` | VS Code (snap) |
+
+## How to extend
+
+**Add a program:** Create `scripts/programs/<name>.sh` with an idempotency guard. It is picked up automatically by `install.sh`. Add a matching test case to `scripts/test_programs.sh`.
+
+**Add a dotfile:** Place the config file in the repo root at the path it should have relative to `~/`, then run `stow .`.
+
+## Coding conventions
+
+- All scripts: `#!/bin/bash` + `set -euo pipefail`
+- Scripts are guarded with `[[ "${BASH_SOURCE[0]}" == "${0}" ]]` only when they define reusable functions that tests source directly
+- Tests mock `sudo`, `apt-get`, and external commands by prepending a `$BIN_DIR` to `PATH`; they never require network or root
+- `.install_state`, `.install_errors`, and `.install.log` are gitignored runtime files
