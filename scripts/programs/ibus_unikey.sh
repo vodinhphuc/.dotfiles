@@ -22,6 +22,14 @@ else
         "[('xkb', 'us'), ('ibus', 'Unikey')]"
 fi
 
+# Set Ctrl+Space as the input source switch shortcut
+# Use Left Ctrl + Left Shift to switch input method (modifier-only shortcut via ibus)
+gsettings set org.freedesktop.ibus.general.hotkey next-engine "['Control_L+Shift_L']"
+gsettings set org.freedesktop.ibus.general.hotkey next-engine-in-menu "['Control_L+Shift_L']"
+# Clear GNOME's Super+Space default to avoid conflicts
+gsettings set org.gnome.desktop.wm.keybindings switch-input-source "[]"
+gsettings set org.gnome.desktop.wm.keybindings switch-input-source-backward "[]"
+
 # Restart ibus to apply changes
 ibus restart 2>/dev/null || true
 echo "ibus-unikey setup complete. Log out and back in to activate."
