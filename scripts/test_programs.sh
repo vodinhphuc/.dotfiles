@@ -94,6 +94,24 @@ code=$?
 assert_exit_zero "tpm.sh exits 0 when already installed" "$code"
 assert_output_contains "tpm.sh prints 'Already installed'" "Already installed" "$output"
 
+# --- tpm.sh: invokes install_plugins when binary is present ---
+echo ""
+echo "=== tpm.sh: invokes install_plugins ==="
+MOCK_HOME="$TEST_DIR/home_tpm_install"
+TPM_BIN="$MOCK_HOME/.tmux/plugins/tpm/bin"
+mkdir -p "$TPM_BIN"
+SENTINEL="$TEST_DIR/install_plugins_called"
+cat > "$TPM_BIN/install_plugins" <<EOF
+#!/bin/bash
+touch "$SENTINEL"
+EOF
+chmod +x "$TPM_BIN/install_plugins"
+output=$(HOME="$MOCK_HOME" bash "$DOTFILES_DIR/scripts/programs/tpm.sh" 2>&1)
+code=$?
+assert_exit_zero "tpm.sh exits 0 when install_plugins present" "$code"
+assert_file_exists "tpm.sh invokes install_plugins" "$SENTINEL"
+assert_output_contains "tpm.sh announces plugin install" "Installing tmux plugins" "$output"
+
 # --- miniconda.sh: skip when miniconda3 dir exists ---
 echo ""
 echo "=== miniconda.sh: skip when already installed ==="
