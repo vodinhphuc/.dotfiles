@@ -1,3 +1,17 @@
+-- ============================================================================
+-- Vendored from https://github.com/nvim-lua/kickstart.nvim
+--
+-- LOCAL CUSTOMIZATIONS (search anchors):
+--   1. LSP servers       — search:  bashls = {},
+--   2. Treesitter parsers — search:  'python', 'go', 'typescript', 'tsx' }
+--   3. Formatters         — search:  sh = { 'shfmt' },
+--
+-- Learning entry points:
+--   :Tutor       — interactive vim/nvim tutor
+--   :checkhealth — diagnose plugin/LSP/treesitter status
+--   :help        — built-in help (e.g. :help lazy.nvim)
+-- ============================================================================
+
 --[[
 
 =====================================================================
@@ -613,6 +627,12 @@ require('lazy').setup({
 
         stylua = {}, -- Used to format Lua code
 
+        -- Local additions (vendored kickstart customization):
+        bashls = {},
+        pyright = {},
+        gopls = {},
+        ts_ls = {},
+
         -- Special Lua Config, as recommended by neovim help docs
         lua_ls = {
           on_init = function(client)
@@ -708,6 +728,14 @@ require('lazy').setup({
         --
         -- You can use 'stop_after_first' to run the first available formatter from the list
         -- javascript = { "prettierd", "prettier", stop_after_first = true },
+
+        -- Local additions (vendored kickstart customization):
+        sh = { 'shfmt' },
+        python = { 'isort', 'black' },
+        go = { 'goimports', 'gofmt' },
+        typescript = { 'prettier' },
+        typescriptreact = { 'prettier' },
+        javascript = { 'prettier' },
       },
     },
   },
@@ -889,7 +917,7 @@ require('lazy').setup({
     -- [[ Configure Treesitter ]] See `:help nvim-treesitter-intro`
     config = function()
       -- ensure basic parser are installed
-      local parsers = { 'bash', 'c', 'diff', 'html', 'lua', 'luadoc', 'markdown', 'markdown_inline', 'query', 'vim', 'vimdoc' }
+      local parsers = { 'bash', 'c', 'diff', 'html', 'lua', 'luadoc', 'markdown', 'markdown_inline', 'query', 'vim', 'vimdoc', 'python', 'go', 'typescript', 'tsx' }
       require('nvim-treesitter').install(parsers)
 
       ---@param buf integer
