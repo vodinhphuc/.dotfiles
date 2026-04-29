@@ -4,3 +4,9 @@ conda-zsh-completion
 .install.log
 .claude/settings.local.json
 .config/nvim/lazy-lock.json
+
+# Convenience symlinks at repo root pointing into scripts/ (created locally)
+/install.sh
+/programs
+/test_orchestrator.sh
+/test_programs.sh
