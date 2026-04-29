@@ -162,3 +162,7 @@ unset __conda_setup
 # <<< conda initialize <<<
 
 export PATH="$HOME/.local/bin:$PATH"
+export PATH=~/.npm-global/bin:$PATH
+
+# K3s kubectl config
+export KUBECONFIG=~/.kube/config
