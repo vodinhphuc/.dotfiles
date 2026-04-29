@@ -3,3 +3,4 @@ conda-zsh-completion
 .install_errors
 .install.log
 .claude/settings.local.json
+.config/nvim/lazy-lock.json
