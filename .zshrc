@@ -166,3 +166,6 @@ export PATH=~/.npm-global/bin:$PATH
 
 # K3s kubectl config
 export KUBECONFIG=~/.kube/config
+
+# Ubuntu names the bat binary `batcat` (conflicts with bacula-console-qt)
+alias bat=batcat
