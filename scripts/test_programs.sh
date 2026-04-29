@@ -174,6 +174,29 @@ code=$?
 assert_exit_zero "visual_code.sh exits 0 when already installed" "$code"
 assert_output_contains "visual_code.sh prints 'Already installed'" "Already installed" "$output"
 
+# --- glow.sh: skip when glow already in PATH ---
+echo ""
+echo "=== glow.sh: skip when glow already installed ==="
+mock_cmd glow
+mock_cmd batcat   # also bypass the bat install path so this test isolates glow
+output=$(PATH="$BIN_DIR:$PATH" bash "$DOTFILES_DIR/scripts/programs/glow.sh" 2>&1)
+code=$?
+assert_exit_zero "glow.sh exits 0 when glow already installed" "$code"
+assert_output_contains "glow.sh prints 'Already installed: glow'" "Already installed: glow" "$output"
+assert_output_contains "glow.sh prints 'Already installed: bat'" "Already installed: bat" "$output"
+rm -f "$BIN_DIR/glow" "$BIN_DIR/batcat"
+
+# --- glow.sh: skip when batcat already in PATH ---
+echo ""
+echo "=== glow.sh: skip when bat already installed ==="
+mock_cmd batcat
+mock_cmd glow
+output=$(PATH="$BIN_DIR:$PATH" bash "$DOTFILES_DIR/scripts/programs/glow.sh" 2>&1)
+code=$?
+assert_exit_zero "glow.sh exits 0 when bat already installed" "$code"
+assert_output_contains "glow.sh prints 'Already installed: bat'" "Already installed: bat" "$output"
+rm -f "$BIN_DIR/glow" "$BIN_DIR/batcat"
+
 # --- terminator.sh: should NOT say "Already installed" when terminator is absent ---
 echo ""
 echo "=== terminator.sh: does NOT say 'Already installed' when terminator is absent ==="
