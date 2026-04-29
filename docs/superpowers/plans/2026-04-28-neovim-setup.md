@@ -296,23 +296,29 @@ Replace that single line with:
 
 Use Edit with `old_string` = `    lua_ls = {` and `new_string` = the 6-line block above. If `old_string` is not unique (it shouldn't be — `lua_ls = {` only appears once as a server declaration), Edit will succeed on the single match.
 
-- [ ] **Step 3.3: Extend Treesitter `ensure_installed` to include python/go/typescript/tsx**
+- [ ] **Step 3.3: Extend Treesitter `parsers` list to include python/go/typescript/tsx**
 
-Find the `ensure_installed = { ... }` line for treesitter. Upstream typically looks like:
+In the actual upstream init.lua, the Treesitter parser list is declared as a local variable named `parsers` (not `ensure_installed`) inside the `nvim-treesitter` plugin spec's `config` function. Find it with:
 
-```lua
-      ensure_installed = { 'bash', 'c', 'diff', 'html', 'lua', 'luadoc', 'markdown', 'markdown_inline', 'query', 'vim', 'vimdoc' },
+```bash
+grep -n "local parsers = {" .config/nvim/init.lua
 ```
 
-(Exact list may differ — read the actual line first.)
-
-Use Edit to replace that single line with the same list plus our four additions appended before the closing `}`:
+It looks like:
 
 ```lua
-      ensure_installed = { 'bash', 'c', 'diff', 'html', 'lua', 'luadoc', 'markdown', 'markdown_inline', 'query', 'vim', 'vimdoc', 'python', 'go', 'typescript', 'tsx' },
+      local parsers = { 'bash', 'c', 'diff', 'html', 'lua', 'luadoc', 'markdown', 'markdown_inline', 'query', 'vim', 'vimdoc' }
 ```
 
-If upstream's list differs, preserve their entries exactly and only append `'python', 'go', 'typescript', 'tsx'` (skipping any already present — `bash` is typically there already; do **not** duplicate it).
+Use Edit to replace that single line with the same list plus our four additions:
+
+```lua
+      local parsers = { 'bash', 'c', 'diff', 'html', 'lua', 'luadoc', 'markdown', 'markdown_inline', 'query', 'vim', 'vimdoc', 'python', 'go', 'typescript', 'tsx' }
+```
+
+If upstream's list differs, preserve their entries exactly and only append `'python', 'go', 'typescript', 'tsx'` — `bash` is typically there already; do **not** duplicate it.
+
+(Note: there is a separate `ensure_installed` variable elsewhere in the file used by Mason for LSPs/tools — that one is fed automatically from the `servers` table via `vim.tbl_keys(servers)`, so adding LSPs in Step 3.2 already makes them Mason-installed. Do not edit that block.)
 
 - [ ] **Step 3.4: Extend `formatters_by_ft` for sh/python/go/typescript**
 
@@ -355,7 +361,7 @@ Use Edit to prepend a header block. The existing first line of upstream kickstar
 --
 -- LOCAL CUSTOMIZATIONS (search anchors):
 --   1. LSP servers       — search:  bashls = {},
---   2. Treesitter parsers — search:  'python', 'go', 'typescript', 'tsx'
+--   2. Treesitter parsers — search:  'python', 'go', 'typescript', 'tsx' }
 --   3. Formatters         — search:  sh = { 'shfmt' },
 --
 -- Learning entry points:
@@ -373,7 +379,7 @@ Use Edit to prepend a header block. The existing first line of upstream kickstar
 Run:
 ```bash
 grep -c "bashls = {}" .config/nvim/init.lua            # expect: 1
-grep -c "'python', 'go', 'typescript', 'tsx'" .config/nvim/init.lua  # expect: 1
+grep -c "'python', 'go', 'typescript', 'tsx' }" .config/nvim/init.lua  # expect: 1
 grep -c "sh = { 'shfmt' }" .config/nvim/init.lua       # expect: 1
 grep -c "Vendored from https://github.com/nvim-lua/kickstart.nvim" .config/nvim/init.lua  # expect: 1
 ```
