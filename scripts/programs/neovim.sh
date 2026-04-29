@@ -24,6 +24,13 @@ sudo apt-get install -y \
     nodejs \
     npm
 
+# nvim-treesitter (main branch, vendored in init.lua) builds parsers from source
+# via the tree-sitter CLI. apt does not ship it; install via npm (just installed
+# above). Without this, :TSUpdate / lazy.nvim's first-launch parser install fails
+# with "ENOENT: no such file or directory (cmd): 'tree-sitter'".
+echo "Installing tree-sitter CLI via npm..."
+sudo npm install -g tree-sitter-cli
+
 if ! command -v go &>/dev/null; then
     echo "Note: 'go' is not on PATH. Mason will skip gopls until Go is installed."
 fi

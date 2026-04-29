@@ -143,16 +143,24 @@ echo "snap \$*" >> "$NEOVIM_LOG"
 exit 0
 EOF
 chmod +x "$BIN_DIR/snap"
-# Run with isolated PATH (no nvim, no go) + mocked sudo + mocked snap/apt
+# Logging mock for npm (records argv so we can assert tree-sitter-cli was installed)
+cat > "$BIN_DIR/npm" <<EOF
+#!/bin/bash
+echo "npm \$*" >> "$NEOVIM_LOG"
+exit 0
+EOF
+chmod +x "$BIN_DIR/npm"
+# Run with isolated PATH (no nvim, no go) + mocked sudo + mocked snap/apt/npm
 output=$(PATH="$BIN_DIR" /bin/bash "$DOTFILES_DIR/scripts/programs/neovim.sh" 2>&1) || true
 log_content="$(cat "$NEOVIM_LOG" 2>/dev/null)"
 assert_output_contains "neovim.sh installs nvim via snap with classic confinement" "snap install nvim --classic" "$log_content"
 assert_output_contains "neovim.sh installs ripgrep (Telescope dep)" "ripgrep" "$log_content"
 assert_output_contains "neovim.sh installs fd-find (Telescope dep)" "fd-find" "$log_content"
 assert_output_contains "neovim.sh installs nodejs (for Mason-managed LSPs)" "nodejs" "$log_content"
+assert_output_contains "neovim.sh installs tree-sitter-cli via npm" "npm install -g tree-sitter-cli" "$log_content"
 assert_output_contains "neovim.sh notes missing go toolchain" "Mason will skip gopls" "$output"
 # Cleanup: remove the logging mocks so they don't affect later tests
-rm -f "$BIN_DIR/apt-get" "$BIN_DIR/snap" "$BIN_DIR/sudo"
+rm -f "$BIN_DIR/apt-get" "$BIN_DIR/snap" "$BIN_DIR/npm" "$BIN_DIR/sudo"
 
 # --- miniconda.sh: skip when miniconda3 dir exists ---
 echo ""
