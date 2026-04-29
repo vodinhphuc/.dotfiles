@@ -167,5 +167,9 @@ unset __conda_setup
 export PATH="$HOME/.local/bin:$PATH"
 export PATH=~/.npm-global/bin:$PATH
 
+# Ensure /snap/bin is on PATH (Ubuntu's profile.d only sets it for login shells;
+# non-login zsh sessions otherwise miss snap binaries like nvim, glow, docker).
+case ":$PATH:" in *":/snap/bin:"*) ;; *) export PATH="/snap/bin:$PATH" ;; esac
+
 # K3s kubectl config
 export KUBECONFIG=~/.kube/config
