@@ -2,3 +2,6 @@ scripts
 .git
 .gitignore
 README.md
+# Untracked, gitignored, machine-local Claude settings live in $HOME/.claude/
+# (see .gitignore). Don't manage them via stow.
+.claude
