@@ -112,6 +112,49 @@ assert_exit_zero "tpm.sh exits 0 when install_plugins present" "$code"
 assert_file_exists "tpm.sh invokes install_plugins" "$SENTINEL"
 assert_output_contains "tpm.sh announces plugin install" "Installing tmux plugins" "$output"
 
+# --- neovim.sh: skip when nvim already in PATH ---
+echo ""
+echo "=== neovim.sh: skip when already installed ==="
+mock_cmd nvim
+output=$(PATH="$BIN_DIR:$PATH" bash "$DOTFILES_DIR/scripts/programs/neovim.sh" 2>&1)
+code=$?
+assert_exit_zero "neovim.sh exits 0 when already installed" "$code"
+assert_output_contains "neovim.sh prints 'Already installed: neovim'" "Already installed: neovim" "$output"
+# Cleanup so later tests don't see this nvim mock
+rm -f "$BIN_DIR/nvim"
+
+# --- neovim.sh: installs neovim and deps when absent ---
+echo ""
+echo "=== neovim.sh: installs neovim and deps when absent ==="
+NEOVIM_LOG="$TEST_DIR/neovim_calls.log"
+: > "$NEOVIM_LOG"
+mock_sudo
+# Logging mock for apt-get (records argv so we can assert what was installed)
+cat > "$BIN_DIR/apt-get" <<EOF
+#!/bin/bash
+echo "apt-get \$*" >> "$NEOVIM_LOG"
+exit 0
+EOF
+chmod +x "$BIN_DIR/apt-get"
+# Logging mock for add-apt-repository
+cat > "$BIN_DIR/add-apt-repository" <<EOF
+#!/bin/bash
+echo "add-apt-repository \$*" >> "$NEOVIM_LOG"
+exit 0
+EOF
+chmod +x "$BIN_DIR/add-apt-repository"
+# Run with isolated PATH (no nvim, no go) + mocked sudo + mocked apt commands
+output=$(PATH="$BIN_DIR" /bin/bash "$DOTFILES_DIR/scripts/programs/neovim.sh" 2>&1) || true
+log_content="$(cat "$NEOVIM_LOG" 2>/dev/null)"
+assert_output_contains "neovim.sh adds the neovim stable PPA" "ppa:neovim-ppa/stable" "$log_content"
+assert_output_contains "neovim.sh installs the neovim package" "neovim" "$log_content"
+assert_output_contains "neovim.sh installs ripgrep (Telescope dep)" "ripgrep" "$log_content"
+assert_output_contains "neovim.sh installs fd-find (Telescope dep)" "fd-find" "$log_content"
+assert_output_contains "neovim.sh installs nodejs (for Mason-managed LSPs)" "nodejs" "$log_content"
+assert_output_contains "neovim.sh notes missing go toolchain" "Mason will skip gopls" "$output"
+# Cleanup: remove the logging mocks so they don't affect later tests
+rm -f "$BIN_DIR/apt-get" "$BIN_DIR/add-apt-repository" "$BIN_DIR/sudo"
+
 # --- miniconda.sh: skip when miniconda3 dir exists ---
 echo ""
 echo "=== miniconda.sh: skip when already installed ==="
