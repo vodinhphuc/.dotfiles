@@ -136,24 +136,23 @@ echo "apt-get \$*" >> "$NEOVIM_LOG"
 exit 0
 EOF
 chmod +x "$BIN_DIR/apt-get"
-# Logging mock for add-apt-repository
-cat > "$BIN_DIR/add-apt-repository" <<EOF
+# Logging mock for snap (records argv so we can assert nvim was installed via snap)
+cat > "$BIN_DIR/snap" <<EOF
 #!/bin/bash
-echo "add-apt-repository \$*" >> "$NEOVIM_LOG"
+echo "snap \$*" >> "$NEOVIM_LOG"
 exit 0
 EOF
-chmod +x "$BIN_DIR/add-apt-repository"
-# Run with isolated PATH (no nvim, no go) + mocked sudo + mocked apt commands
+chmod +x "$BIN_DIR/snap"
+# Run with isolated PATH (no nvim, no go) + mocked sudo + mocked snap/apt
 output=$(PATH="$BIN_DIR" /bin/bash "$DOTFILES_DIR/scripts/programs/neovim.sh" 2>&1) || true
 log_content="$(cat "$NEOVIM_LOG" 2>/dev/null)"
-assert_output_contains "neovim.sh adds the neovim stable PPA" "ppa:neovim-ppa/stable" "$log_content"
-assert_output_contains "neovim.sh installs the neovim package" "neovim" "$log_content"
+assert_output_contains "neovim.sh installs nvim via snap with classic confinement" "snap install nvim --classic" "$log_content"
 assert_output_contains "neovim.sh installs ripgrep (Telescope dep)" "ripgrep" "$log_content"
 assert_output_contains "neovim.sh installs fd-find (Telescope dep)" "fd-find" "$log_content"
 assert_output_contains "neovim.sh installs nodejs (for Mason-managed LSPs)" "nodejs" "$log_content"
 assert_output_contains "neovim.sh notes missing go toolchain" "Mason will skip gopls" "$output"
 # Cleanup: remove the logging mocks so they don't affect later tests
-rm -f "$BIN_DIR/apt-get" "$BIN_DIR/add-apt-repository" "$BIN_DIR/sudo"
+rm -f "$BIN_DIR/apt-get" "$BIN_DIR/snap" "$BIN_DIR/sudo"
 
 # --- miniconda.sh: skip when miniconda3 dir exists ---
 echo ""
