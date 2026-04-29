@@ -106,8 +106,10 @@ echo "add-apt-repository \$*" >> "$NEOVIM_LOG"
 exit 0
 EOF
 chmod +x "$BIN_DIR/add-apt-repository"
-# Run with isolated PATH (no nvim, no go) + mocked sudo + mocked apt commands
-output=$(PATH="$BIN_DIR" bash "$DOTFILES_DIR/scripts/programs/neovim.sh" 2>&1) || true
+# Run with isolated PATH (no nvim, no go) + mocked sudo + mocked apt commands.
+# Use absolute /bin/bash so parent shell can find bash even with isolated PATH;
+# the inner bash still inherits PATH="$BIN_DIR" for command lookups inside the script.
+output=$(PATH="$BIN_DIR" /bin/bash "$DOTFILES_DIR/scripts/programs/neovim.sh" 2>&1) || true
 log_content="$(cat "$NEOVIM_LOG" 2>/dev/null)"
 assert_output_contains "neovim.sh adds the neovim stable PPA" "ppa:neovim-ppa/stable" "$log_content"
 assert_output_contains "neovim.sh installs the neovim package" "neovim" "$log_content"
