@@ -140,6 +140,9 @@ export PATH=$PATH:/usr/local/go/bin:$GOPATH/bin
 # Tmux powerlevel10k support
 alias tmux="TERM=xterm-256color tmux"
 
+# Ubuntu names the bat binary `batcat` (conflicts with bacula-console-qt)
+alias bat="batcat"
+
 # miniconda activate conda after install
 # source ~/miniconda3/bin/activate
 export PATH=$PATH:~/miniconda3/bin
@@ -166,6 +169,3 @@ export PATH=~/.npm-global/bin:$PATH
 
 # K3s kubectl config
 export KUBECONFIG=~/.kube/config
-
-# Ubuntu names the bat binary `batcat` (conflicts with bacula-console-qt)
-alias bat=batcat
