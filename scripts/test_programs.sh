@@ -194,6 +194,7 @@ mock_cmd glow
 output=$(PATH="$BIN_DIR:$PATH" bash "$DOTFILES_DIR/scripts/programs/glow.sh" 2>&1)
 code=$?
 assert_exit_zero "glow.sh exits 0 when bat already installed" "$code"
+assert_output_contains "glow.sh (bat-block) prints 'Already installed: glow'" "Already installed: glow" "$output"
 assert_output_contains "glow.sh prints 'Already installed: bat'" "Already installed: bat" "$output"
 rm -f "$BIN_DIR/glow" "$BIN_DIR/batcat"
 

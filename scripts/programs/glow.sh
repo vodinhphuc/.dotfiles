@@ -1,7 +1,7 @@
 #!/bin/bash
 set -euo pipefail
 
-# glow — terminal markdown renderer (snap, classic confinement)
+# glow — terminal markdown renderer (snap, strict confinement)
 if ! command -v glow &>/dev/null; then
     echo "Installing glow..."
     sudo snap install glow
