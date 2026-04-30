@@ -8,12 +8,14 @@ Automated Ubuntu desktop environment setup using [GNU Stow](https://www.gnu.org/
 |---|---|
 | Shell | zsh, oh-my-zsh, antigen, powerlevel10k, conda-zsh-completion |
 | Terminal | Terminator (set as default Ctrl+Alt+T) |
-| Editor | VS Code (snap) |
+| Editors | Neovim (snap, kickstart-based IDE config), VS Code (snap), Vim |
 | Container | Docker (snap) |
 | Python | Miniconda3 |
-| Multiplexer | tmux + TPM (Tmux Plugin Manager) |
+| Multiplexer | tmux (prefix `Ctrl-q`) + TPM with catppuccin / tmux-yank / tmux-sensible plugins |
+| Markdown / source reading | glow (Charm apt repo), bat (apt; aliased from `batcat`) |
 | Input method | ibus + ibus-unikey (Vietnamese input) |
-| Utilities | curl, git, htop, tree, vim, wget, nvtop |
+| Neovim runtime deps | ripgrep, fd-find, nodejs, npm, tree-sitter-cli, build-essential, xclip |
+| Utilities | curl, git, htop, tree, wget, nvtop |
 
 ## Prerequisites
 
@@ -66,6 +68,24 @@ After the first run, a few things require manual action:
 - **Docker group** — log out and back in for `docker` to work without `sudo`
 - **Vietnamese input** — log out and back in, then use `Super+Space` to switch to Unikey
 - **Powerlevel10k theme** — run `p10k configure` to set up the prompt style
+- **Neovim plugins** — first launch of `nvim` triggers lazy.nvim to install plugins (~30s) and Mason to install LSPs (background). Run `:checkhealth` once installs settle.
+- **TPM plugins** — handled automatically by `scripts/programs/tpm.sh` (clones TPM, runs `install_plugins`). No `prefix + I` step needed.
+
+## User guides
+
+In-repo references for the daily-use tools (rendered with `glow`, paged with `less`):
+
+| Guide | What it covers |
+|---|---|
+| [`docs/guides/nvim.md`](docs/guides/nvim.md) | Modes, leader keymaps, kickstart's LSP / Telescope / Mason / formatting, troubleshooting |
+| [`docs/guides/tmux.md`](docs/guides/tmux.md) | Prefix (`Ctrl-q`), sessions / windows / panes, copy-paste with tmux-yank, plugin set, workflows |
+| [`docs/guides/cli-readers.md`](docs/guides/cli-readers.md) | `glow` (markdown), `bat` (syntax-highlighted source) — quick-start + tmux notes |
+
+Read any of them in the terminal:
+
+```bash
+glow ~/docs/guides/tmux.md
+```
 
 ## Resuming after failure
 
@@ -94,9 +114,23 @@ bash scripts/install.sh
 ```
 ~/.dotfiles/
 ├── .antigenrc                  # zsh plugin list (antigen)
+├── .bashrc                     # bash config (rarely used; zsh is primary)
+├── .gitignore                  # gitignored runtime + machine-local state
 ├── .p10k.zsh                   # powerlevel10k prompt config
-├── .tmux.conf                  # tmux config
+├── .stow-local-ignore          # files stow must NOT manage
+├── .tmux.conf                  # tmux config (prefix Ctrl-q)
 ├── .zshrc                      # zsh config
+├── .config/
+│   └── nvim/
+│       └── init.lua            # vendored kickstart.nvim + LSPs / formatters
+├── docs/
+│   ├── guides/                 # user-facing references (rendered with glow)
+│   │   ├── nvim.md
+│   │   ├── tmux.md
+│   │   └── cli-readers.md
+│   └── superpowers/            # design specs + implementation plans (process artifacts)
+│       ├── specs/
+│       └── plans/
 └── scripts/
     ├── install.sh              # orchestrator
     ├── test_orchestrator.sh    # tests for install.sh logic
@@ -104,10 +138,12 @@ bash scripts/install.sh
     └── programs/
         ├── custome_zsh.sh      # oh-my-zsh, antigen, powerlevel10k
         ├── docker.sh           # Docker via snap
+        ├── glow.sh             # glow + bat (markdown + syntax-highlighted reading)
         ├── ibus_unikey.sh      # ibus + Vietnamese input setup
         ├── miniconda.sh        # Miniconda3
+        ├── neovim.sh           # Neovim (snap) + IDE deps + tree-sitter CLI
         ├── terminator.sh       # Terminator terminal emulator
-        ├── tpm.sh              # Tmux Plugin Manager
+        ├── tpm.sh              # Tmux Plugin Manager (auto-installs tmux plugins)
         └── visual_code.sh      # VS Code via snap
 ```
 
