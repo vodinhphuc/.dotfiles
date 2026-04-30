@@ -1,6 +1,6 @@
 # Tmux User Guide
 
-Reference for using `tmux` as configured by this dotfiles repo (`.tmux.conf`). The config is opinionated — most notably it changes the prefix from `Ctrl-b` to `Ctrl-Space` — so this guide takes precedence over generic tmux tutorials wherever they conflict.
+Reference for using `tmux` as configured by this dotfiles repo (`.tmux.conf`). The config is opinionated — most notably it changes the prefix from `Ctrl-b` to `Ctrl-q` — so this guide takes precedence over generic tmux tutorials wherever they conflict.
 
 ---
 
@@ -22,7 +22,7 @@ To detach (keep session running, exit attach):
 prefix d
 ```
 
-`prefix` here means `Ctrl-Space` for you. See section 3.
+`prefix` here means `Ctrl-q` for you. See section 3.
 
 ---
 
@@ -55,21 +55,23 @@ Most "tmux trickery" happens via the prefix in normal mode, or via vi-keys in co
 
 ---
 
-## 3. Your prefix is `Ctrl-Space`, not `Ctrl-b`
+## 3. Your prefix is `Ctrl-q`, not `Ctrl-b`
 
 Default tmux uses `Ctrl-b` as its prefix (everywhere on the internet). Your `.tmux.conf` rebinds:
 
 ```tmux
 unbind C-b
-set -g prefix C-Space
-bind C-Space send-prefix
+set -g prefix C-q
+bind C-q send-prefix
 ```
 
-So **everywhere you read "prefix" in this guide** (or in any tmux blog post), press **`Ctrl-Space`**, not `Ctrl-b`.
+So **everywhere you read "prefix" in this guide** (or in any tmux blog post), press **`Ctrl-q`**, not `Ctrl-b`.
 
-If a nested process (e.g., a tmux session inside a tmux session, or a program that wants its own `Ctrl-Space`) needs to see `Ctrl-Space` as a key, press `prefix` then `Ctrl-Space` — that's what `bind C-Space send-prefix` is for: the second press passes through.
+If a nested process (e.g., a tmux session inside a tmux session, or a program that wants its own `Ctrl-q`) needs to see `Ctrl-q` as a key, press `prefix` then `Ctrl-q` — that's what `bind C-q send-prefix` is for: the second press passes through.
 
-**Why change it?** `Ctrl-b` collides with readline's "move cursor back one char" — annoying if you ever attach without thinking. `Ctrl-Space` is unused by most shells.
+**Why change it?** `Ctrl-b` collides with readline's "move cursor back one char" — annoying if you ever attach without thinking. `Ctrl-q` is almost never bound by anything else (the historical `Ctrl-q` / `Ctrl-s` flow control is rarely encountered today).
+
+**Why not `Ctrl-Space`?** An earlier version of this config used `Ctrl-Space`, but on some hardware (notably Samsung tablet keyboards in Linux desktop mode) the keyboard firmware grabs `Ctrl-Space` for input-method switching before any application can see it. `Ctrl-q` avoids that whole class of conflict.
 
 ---
 
@@ -82,7 +84,7 @@ tmux ls                             # list sessions
 tmux a -t work                      # attach
 tmux kill-session -t work           # kill from outside
 
-# from inside tmux (prefix = Ctrl-Space)
+# from inside tmux (prefix = Ctrl-q)
 prefix d                            # detach (session keeps running)
 prefix s                            # list-and-jump session picker
 prefix $                            # rename current session
@@ -239,7 +241,7 @@ Quick reference for the diff between this repo's tmux and stock:
 
 | Setting | Default | This repo |
 |---|---|---|
-| Prefix | `Ctrl-b` | `Ctrl-Space` |
+| Prefix | `Ctrl-b` | `Ctrl-q` |
 | Mouse | off | on |
 | Window/pane indices | start at 0 | start at 1 |
 | Renumber on close | off | on |
@@ -318,13 +320,13 @@ tmux a -t pair                 # both windows now show the same content;
 | Scroll behaves weirdly | You're in copy mode — press `q`. If you want native terminal scroll, hold `Shift` while scrolling. |
 | Long delay after pressing `Esc` (especially in nvim) | `tmux-sensible` should fix it (`escape-time 0`). If not, confirm the plugin loaded with `prefix I` or `bash scripts/programs/tpm.sh`. |
 | Pane keeps closing unexpectedly when running a script | The script ran `exit` or finished. Add `; bash` at the end to keep the shell alive after, or run the command in a wrapping shell. |
-| Two-tmux nesting (e.g., SSH inside tmux) confuses the prefix | `prefix prefix` — the second `Ctrl-Space` passes through to the inner tmux thanks to `bind C-Space send-prefix`. |
+| Two-tmux nesting (e.g., SSH inside tmux) confuses the prefix | `prefix prefix` — the second `Ctrl-q` passes through to the inner tmux thanks to `bind C-q send-prefix`. |
 
 ---
 
 ## 13. Cheat sheet
 
-Single table of every keybind covered above. **prefix** = `Ctrl-Space`.
+Single table of every keybind covered above. **prefix** = `Ctrl-q`.
 
 ### Sessions
 | Keys | Action |
