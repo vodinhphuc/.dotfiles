@@ -6,7 +6,7 @@ Reference for reading rendered markdown and syntax-highlighted source in the ter
 
 ## What's installed
 
-- **`glow`** (snap) — terminal markdown renderer. Beautiful headings/lists/tables/code-blocks, built-in pager, multiple themes. Best fit for prose, READMEs, and `.md` docs.
+- **`glow`** (apt, from Charm's repo) — terminal markdown renderer. Beautiful headings/lists/tables/code-blocks, built-in pager, multiple themes. Best fit for prose, READMEs, and `.md` docs. (Earlier this was a snap install; the snap's strict confinement blocked reads from `~/.dotfiles/`. The apt build runs unconfined.)
 - **`bat`** (apt; binary is `batcat`, aliased to `bat` in `.zshrc`) — `cat` clone with syntax highlighting and Git integration. Best fit for source files, configs, JSON, logs.
 
 Both work cleanly inside tmux (true color is configured in `.tmux.conf`). They do not depend on terminal image protocols, so rendering stays correct under tmux multiplexing.
@@ -132,11 +132,11 @@ bat --list-themes                 # all color schemes
 | Symptom | First thing to try |
 |---|---|
 | `bat: command not found` | Open a new terminal — the alias only loads on shell startup. Or `source ~/.zshrc`. |
-| `glow: command not found` after install | New shell needed for snap binaries; or `hash -r` then retry. |
+| `glow: command not found` after install | `hash -r` to refresh the shell's command cache, or open a new terminal. |
 | Glow renders blank / wrong colors under tmux | Confirm `echo $TERM` is `screen-256color` inside tmux and `xterm-256color` outside. Confirm `.tmux.conf` has the `Tc` override. |
 | `bat` paging is annoying for piping | Use `bat -p` (plain) or `bat --paging=never`. |
 | Wrong theme | `bat --list-themes` then `export BAT_THEME="..."` in `.zshrc`. |
-| Snap install of glow stalls | Snap is fetching from the snap store — wait. If permanently stuck, fall back to the apt repo install (`https://repo.charm.sh/apt/`). |
+| `glow: permission denied` reading a file under `~/.dotfiles/` | You still have the old snap-installed glow on PATH. Run `sudo snap remove glow` then `bash scripts/programs/glow.sh && hash -r`. |
 
 ---
 
