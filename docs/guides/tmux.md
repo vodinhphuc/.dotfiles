@@ -256,57 +256,128 @@ Quick reference for the diff between this repo's tmux and stock:
 
 ---
 
-## 11. Common workflows
+## 11. Working with windows and panes effectively
 
-**"Run a long task and let it survive terminal close"**
+Sections 5 and 6 list every keybind. This section is about *which one to reach for*. The whole point of tmux is that you stop having to think about it — workflows go from "spawn a terminal" to "context, please".
+
+### When to use what
+
+| Use | When |
+|---|---|
+| **New session** | New project / context. Each project gets its own session. |
+| **New window** (`prefix c`) | Same project, different concurrent task (editor / dev server / git ops). Browser-tab analogy. |
+| **New pane** (`prefix h` / `prefix v`) | Same task, side-by-side (editor + tests, code + logs). Splits stay in one window. |
+
+Rule of thumb: if you'd alt-tab between them in a GUI editor, they should be separate **windows**. If you'd want both visible at once, they should be **panes**.
+
+### Workflow 1 — Editor + terminal, single window
+
+```
+nvim .                    # in pane 1
+prefix h                  # split left/right; cwd inherited; focus jumps right
+make test                 # or whatever
+prefix ←                  # back to editor
+```
+
+When the test pane gets noisy: `prefix z` to **zoom** the editor full-window. Press `prefix z` again to get the split back. Zoom is the single most-underused tmux feature — use it constantly.
+
+### Workflow 2 — Three-window project layout
+
+The pattern that pays off most:
+
+| Window | Purpose | Setup |
+|---|---|---|
+| 1 — `code` | nvim | `prefix c`, then rename with `prefix ,` |
+| 2 — `shell` | git, ad-hoc commands | one pane, no splits |
+| 3 — `run` | dev server / tests / logs | split into 2-3 panes |
+
+Switch between them with `Alt-L` / `Alt-H` — fast, no prefix dance. Keep window 1 always being your editor across projects, so muscle memory transfers.
+
+### Workflow 3 — Monitoring + editing in one window
+
+Three panes, each watching something different:
+
+```
+nvim app.py               # pane 1
+prefix h                  # right side:
+tail -f app.log           # pane 2
+prefix v                  # bottom of right side:
+htop                      # pane 3
+prefix ←                  # back to pane 1 (editor)
+```
+
+If logs scroll too fast: `prefix [` enters that pane's copy mode → `?error` to search backward → `q` to leave. The pane keeps streaming while you read.
+
+### Workflow 4 — Promote a pane when it grows up
+
+Started something quick in a pane that's now its own thing:
+
+```
+prefix !                  # current pane → new window
+prefix ,                  # rename it
+```
+
+Reverse direction (move a window's pane back into a split) requires `:join-pane` from the command prompt — rare in practice; just close the window and re-split.
+
+### Workflow 5 — Layout reset
+
+When splits get awkward, hit `prefix Space` a couple of times — cycles through layout presets (`tiled`, `even-horizontal`, `main-vertical`, etc.). Don't waste time micro-resizing with `prefix Ctrl-arrows` until you've tried this.
+
+### Workflow 6 — Long-running task, survive terminal close
+
 ```bash
 tmux new -s build
-make all
-# detach with: prefix d
+make all                  # or any long task
+# detach with: prefix d   (session keeps running)
 # reconnect later from any terminal:
 tmux a -t build
 ```
 
-**"Editor on the left, shell on the right"**
-```bash
-tmux new -s work
-nvim .                         # open editor in pane 1
-prefix h                       # split left/right
-                               # focus jumps to the new pane (right)
-                               # cwd inherited automatically
-```
+### Workflow 7 — Session per project
 
-**"Session per project"**
 ```bash
 cd ~/.dotfiles && tmux new -s dotfiles
 # detach: prefix d
 cd ~/myapp && tmux new -s myapp
 tmux ls
-# attach to whichever:
-tmux a -t dotfiles
+tmux a -t dotfiles        # back to whichever
 ```
 
-**"Reload `.tmux.conf` without restarting"**
-- From inside tmux: `prefix R` (provided by `tmux-sensible`) — prints `sourced ~/.tmux.conf!`
-- From outside: `tmux source-file ~/.tmux.conf`
-- (No `prefix r` shortcut is bound by this repo specifically — `tmux-sensible`'s capital `R` is what you've got.)
+### Workflow 8 — Reload `.tmux.conf` without restarting
 
-**"Share a session between two terminals"**
+- Inside tmux: `prefix R` (provided by `tmux-sensible`) — prints `sourced ~/.tmux.conf!`
+- From outside: `tmux source-file ~/.tmux.conf`
+- (`prefix r` is **not** bound by this repo — `tmux-sensible`'s capital `R` is what you have.)
+
+### Workflow 9 — Share a session between two terminals
+
 ```bash
 # terminal A
 tmux new -s pair
 # terminal B
-tmux a -t pair                 # both windows now show the same content;
-                               # input from either reaches the same shell
+tmux a -t pair            # both windows show the same content;
+                          # input from either reaches the same shell
 ```
 
-**"Find an error in scrollback and copy the line"**
-1. `prefix [` (enter copy mode)
-2. `/error<Enter>` (search forward)
-3. `n` to walk hits, `N` for backward
-4. `V` for line-select (or `v` for char-select), then move cursor
-5. `y` (copies + exits + lands in your system clipboard)
-6. Paste into a browser / nvim / wherever with `Ctrl-Shift-V`
+### Workflow 10 — Find an error in scrollback and copy the line
+
+1. `prefix [` — enter copy mode
+2. `/error<Enter>` — search forward
+3. `n` / `N` — walk hits forward / backward
+4. `V` line-select (or `v` char-select), then move cursor to the end of the selection
+5. `y` — copies + exits + lands in your system clipboard
+6. `Ctrl-Shift-V` — paste into browser / nvim / wherever
+
+### Two anti-patterns
+
+- **Don't pile everything into one window with five panes** — you can't see anything. Three panes per window is the sweet spot. Beyond that, make it another window.
+- **Don't open a new session for every git branch** — sessions are heavy for that. Use `git worktree` + a window-per-worktree inside one session instead.
+
+### Discovering more without leaving tmux
+
+```
+prefix ?                  # list every keybind tmux knows about (paged)
+```
 
 ---
 
