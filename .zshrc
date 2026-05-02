@@ -1,7 +1,25 @@
+# Shadow Docker Desktop's dangling _docker completion symlink (breaks compinit when /mnt/wsl/docker-desktop is unmounted)
+if [[ -L /usr/share/zsh/vendor-completions/_docker && ! -e /usr/share/zsh/vendor-completions/_docker ]]; then
+  _stub=$HOME/.zsh/completions
+  if [[ ! -f $_stub/_docker ]]; then
+    mkdir -p $_stub
+    print '#compdef docker' > $_stub/_docker
+  fi
+  fpath=($_stub $fpath)
+  unset _stub
+fi
+
 source $HOME/.antigen.zsh
-antigen init ~/.antigenrc  
-  
-# add aliases from my alias file  
+antigen init ~/.antigenrc
+
+# History (oh-my-zsh's lib/history.zsh isn't applied here, so set defaults so
+# zsh-autosuggestions has prior commands to suggest from)
+HISTFILE="$HOME/.zsh_history"
+HISTSIZE=50000
+SAVEHIST=10000
+setopt SHARE_HISTORY HIST_IGNORE_DUPS HIST_IGNORE_SPACE
+
+# add aliases from my alias file
 if [ -f ~/.zsh_aliases ]; then  
     . ~/.zsh_aliases  
 fi  
