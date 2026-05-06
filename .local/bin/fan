@@ -1,0 +1,54 @@
+#!/bin/bash
+set -euo pipefail
+
+HWMON_ROOT="${HWMON_ROOT:-/sys/class/hwmon}"
+FAN_DRY_RUN="${FAN_DRY_RUN:-0}"
+
+# Chips that expose controllable PWM channels. Other hwmon devices
+# (nvme, coretemp, iwlwifi, …) only expose temps and are filtered out.
+fan_chip_pattern='^(nct6|it87|f71)'
+
+usage() {
+    cat <<'EOF'
+Usage: fan <command> [args]
+
+Commands:
+  status                 Show fans, temps, PWM levels, and fancontrol service state
+  list                   List controllable PWM channels (pwm1, pwm2, …) with paths
+  set <pwmN> <0-100>     Set PWM as a percentage. Add --force to allow 0.
+                         Switches the channel to manual mode (pwm_enable=1).
+  manual                 Stop the fancontrol service so manual values stick
+  auto                   Start the fancontrol service (curve resumes)
+  help, -h, --help       Show this help
+
+Environment:
+  HWMON_ROOT             Override sysfs root (default: /sys/class/hwmon)
+  FAN_DRY_RUN=1          Print systemctl commands instead of running them
+
+See docs/guides/fans.md for setup, fan curves, and safety notes.
+EOF
+}
+
+main() {
+    local cmd="${1:-help}"
+    shift || true
+    case "$cmd" in
+        help|-h|--help) usage ;;
+        list)           cmd_list ;;
+        status)         cmd_status ;;
+        set)            cmd_set "$@" ;;
+        manual)         cmd_manual ;;
+        auto)           cmd_auto ;;
+        *)              usage; exit 1 ;;
+    esac
+}
+
+# Stubs filled in by later tasks. Each prints "not implemented" and exits 1
+# so the suite shows clear failures until each subcommand lands.
+cmd_list()    { echo "not implemented: list"   >&2; exit 1; }
+cmd_status()  { echo "not implemented: status" >&2; exit 1; }
+cmd_set()     { echo "not implemented: set"    >&2; exit 1; }
+cmd_manual()  { echo "not implemented: manual" >&2; exit 1; }
+cmd_auto()    { echo "not implemented: auto"   >&2; exit 1; }
+
+main "$@"

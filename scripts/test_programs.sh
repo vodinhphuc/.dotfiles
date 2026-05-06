@@ -335,6 +335,17 @@ assert_exit_zero "fan_control.sh exits 0 when dpkg-query reports installed" "$co
 assert_output_contains "fan_control.sh skips via real dpkg-query path" "Already installed: fan_control" "$output"
 rm -f "$BIN_DIR/dpkg-query" "$BIN_DIR/sudo"
 
+# --- fan CLI: dispatch to dedicated test file ---
+echo ""
+echo "=== fan CLI ==="
+if bash "$DOTFILES_DIR/scripts/test_fan_cli.sh"; then
+    echo "  PASS: fan CLI suite"
+    PASS=$((PASS + 1))
+else
+    echo "  FAIL: fan CLI suite"
+    FAIL=$((FAIL + 1))
+fi
+
 # --- Syntax checks ---
 echo ""
 echo "=== Syntax checks ==="
