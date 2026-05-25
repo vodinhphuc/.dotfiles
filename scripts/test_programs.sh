@@ -181,6 +181,21 @@ code=$?
 assert_exit_zero "visual_code.sh exits 0 when already installed" "$code"
 assert_output_contains "visual_code.sh prints 'Already installed'" "Already installed" "$output"
 
+# --- uv.sh: skip when uv already in PATH, still (re)generates completions ---
+echo ""
+echo "=== uv.sh: skip when already installed ==="
+mock_cmd uv
+mock_cmd uvx
+MOCK_HOME="$TEST_DIR/home_uv"
+mkdir -p "$MOCK_HOME"
+output=$(PATH="$BIN_DIR:$PATH" HOME="$MOCK_HOME" bash "$DOTFILES_DIR/scripts/programs/uv.sh" 2>&1)
+code=$?
+assert_exit_zero "uv.sh exits 0 when already installed" "$code"
+assert_output_contains "uv.sh prints 'Already installed: uv'" "Already installed: uv" "$output"
+assert_file_exists "uv.sh generates uv.zsh completion" "$MOCK_HOME/.config/uv/uv.zsh"
+assert_file_exists "uv.sh generates uvx.zsh completion" "$MOCK_HOME/.config/uv/uvx.zsh"
+rm -f "$BIN_DIR/uv" "$BIN_DIR/uvx"
+
 # --- glow.sh: skip when glow already in PATH ---
 echo ""
 echo "=== glow.sh: skip when glow already installed ==="
