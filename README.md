@@ -10,7 +10,7 @@ Automated Ubuntu desktop environment setup using [GNU Stow](https://www.gnu.org/
 | Terminal | Terminator (set as default Ctrl+Alt+T) |
 | Editors | Neovim (snap, kickstart-based IDE config), VS Code (snap), Vim |
 | Container | Docker (snap) |
-| Python | Miniconda3 |
+| Python | Miniconda3, uv (Astral package/project manager + uvx) |
 | Multiplexer | tmux (prefix `Ctrl-q`) + TPM with catppuccin / tmux-yank / tmux-sensible plugins |
 | Markdown / source reading | glow (Charm apt repo), bat (apt; aliased from `batcat`) |
 | Input method | ibus + ibus-unikey (Vietnamese input) |
@@ -138,12 +138,14 @@ bash scripts/install.sh
     └── programs/
         ├── custome_zsh.sh      # oh-my-zsh, antigen, powerlevel10k
         ├── docker.sh           # Docker via snap
+        ├── fan_control.sh      # lm-sensors + fancontrol (nct6775 module)
         ├── glow.sh             # glow + bat (markdown + syntax-highlighted reading)
         ├── ibus_unikey.sh      # ibus + Vietnamese input setup
         ├── miniconda.sh        # Miniconda3
         ├── neovim.sh           # Neovim (snap) + IDE deps + tree-sitter CLI
         ├── terminator.sh       # Terminator terminal emulator
         ├── tpm.sh              # Tmux Plugin Manager (auto-installs tmux plugins)
+        ├── uv.sh               # uv + uvx (Python pkg manager) + zsh completions
         └── visual_code.sh      # VS Code via snap
 ```
 

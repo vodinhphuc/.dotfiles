@@ -53,10 +53,14 @@ Current scripts:
 |---|---|
 | `custome_zsh.sh` | oh-my-zsh, antigen, powerlevel10k, conda-zsh-completion |
 | `docker.sh` | Docker (snap), adds user to `docker` group |
+| `fan_control.sh` | lm-sensors + fancontrol, persists `nct6775` kernel module |
+| `glow.sh` | glow (Charm apt repo) + bat (markdown / syntax-highlighted reading) |
 | `ibus_unikey.sh` | ibus, ibus-unikey, configures GNOME input sources |
 | `miniconda.sh` | Miniconda3 to `~/miniconda3` |
+| `neovim.sh` | Neovim (snap) + IDE deps + tree-sitter CLI |
 | `terminator.sh` | Terminator, sets as default terminal (Ctrl+Alt+T) |
 | `tpm.sh` | Tmux Plugin Manager |
+| `uv.sh` | uv + uvx (Python pkg/project manager), pre-generates zsh completions to `~/.config/uv` |
 | `visual_code.sh` | VS Code (snap) |
 
 ## How to extend
