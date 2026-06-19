@@ -10,3 +10,9 @@ conda-zsh-completion
 /programs
 /test_orchestrator.sh
 /test_programs.sh
+
+# Runtime-installed binaries land here (uv.sh installs uv/uvx; claude is the
+# Claude Code launcher). They are large/machine-specific and must not be
+# committed. The `fan` CLI is a tracked repo script, so keep it.
+.local/bin/*
+!.local/bin/fan
