@@ -52,12 +52,19 @@ git clone git@github.com:vodinhphuc/.dotfiles.git ~/.dotfiles
 cd ~/.dotfiles && bash scripts/install.sh
 ```
 
-This opens an interactive menu where you toggle which phases and programs to
-install (type a number to toggle, `a`/`n` for all/none, `q` to quit, Enter to
-confirm). To skip the menu and install everything, pass `--all`:
+First it asks for the **install target** — native Ubuntu or WSL (auto-detected,
+press Enter to accept). On WSL, desktop/hardware-only programs (docker,
+fan_control, ibus_unikey, terminator, VS Code) start deselected since they
+don't apply. Then an interactive menu lets you toggle which phases and programs
+to install (type a number to toggle, `a`/`n` for all/none, `q` to quit, Enter
+to confirm).
+
+To skip the prompts and install everything for the detected target, pass `--all`
+(combine with `--native`/`--wsl` to force the target):
 
 ```bash
-cd ~/.dotfiles && bash scripts/install.sh --all
+cd ~/.dotfiles && bash scripts/install.sh --all          # auto-detect target
+cd ~/.dotfiles && bash scripts/install.sh --all --wsl    # force WSL
 ```
 
 `--all` is **required** when there is no interactive terminal (e.g. piped input
@@ -65,9 +72,10 @@ or CI), otherwise the installer exits with a message.
 
 The installer will:
 1. Disable the install-media (`cdrom`) apt source so `apt update` can't break
-2. Let you choose phases (`system update`, `base packages`) and individual programs
-3. Always install `stow` and apply dotfile symlinks
-4. Run the selected phases and `scripts/programs/` scripts (alphabetical order)
+2. Detect/ask the install target (native Ubuntu vs WSL)
+3. Let you choose phases (`system update`, `base packages`) and individual programs
+4. Always install `stow` and apply dotfile symlinks
+5. Run the selected phases and `scripts/programs/` scripts (alphabetical order)
 
 Progress is saved in `.install_state`. If the installer is interrupted, re-run it — completed steps are skipped automatically.
 

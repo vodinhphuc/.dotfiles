@@ -147,6 +147,28 @@ is_selected system_update; assert_equals "set_all 0 deselects system_update" "1"
 set_all 1
 is_selected system_update; assert_equals "set_all 1 selects system_update" "0" "$?"
 
+echo ""
+echo "=== Test: install target (native vs wsl) defaults ==="
+# Use the real program scripts so native-only classification applies
+PROGRAMS_DIR="$DOTFILES_DIR/scripts/programs"
+
+is_native_only fan_control; assert_equals "fan_control is native-only" "0" "$?"
+is_native_only glow;        assert_equals "glow is not native-only" "1" "$?"
+
+ENVIRONMENT="native"; build_plan
+is_selected fan_control; assert_equals "native: fan_control selected by default" "0" "$?"
+is_selected glow;        assert_equals "native: glow selected by default" "0" "$?"
+
+ENVIRONMENT="wsl"; build_plan
+is_selected fan_control; assert_equals "wsl: fan_control deselected by default" "1" "$?"
+is_selected terminator;  assert_equals "wsl: terminator deselected by default" "1" "$?"
+is_selected glow;        assert_equals "wsl: glow still selected by default" "0" "$?"
+is_selected custome_zsh; assert_equals "wsl: custome_zsh still selected by default" "0" "$?"
+
+echo ""
+echo "=== Test: detect_environment honors WSL_DISTRO_NAME ==="
+assert_equals "WSL_DISTRO_NAME set -> wsl" "wsl" "$(WSL_DISTRO_NAME=Ubuntu detect_environment)"
+
 # --- Summary ---
 echo ""
 echo "=========================================="
