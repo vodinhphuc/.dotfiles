@@ -13,6 +13,16 @@ APT_SOURCES_DIR="${APT_SOURCES_DIR:-/etc/apt/sources.list.d}"
 # Directory of per-program scripts (overridable so tests can target temp dirs)
 PROGRAMS_DIR="${PROGRAMS_DIR:-$DOTFILES_DIR/scripts/programs}"
 
+# Install target: "native" (a normal Ubuntu desktop) or "wsl" (Windows
+# Subsystem for Linux). On WSL there is no GPU/sensors and no GNOME desktop,
+# and snap/systemd are unreliable, so desktop/hardware programs are skipped
+# by default. Resolved at runtime; "native" is a safe default for sourcing.
+ENVIRONMENT="${ENVIRONMENT:-native}"
+
+# Program scripts that only make sense on a native desktop. They stay visible
+# in the menu but start deselected on WSL (the user can still toggle them on).
+NATIVE_ONLY_PROGRAMS=" docker fan_control ibus_unikey terminator visual_code "
+
 declare -a STEPS_OK=()
 declare -a STEPS_SKIP=()
 declare -a STEPS_FAIL=()
@@ -99,28 +109,73 @@ function apply_stow {
 }
 
 function install_base {
-    echo "[BASE] Installing base packages..."
-    for pkg in chrome-gnome-shell curl htop tree vim wget tmux zsh nvtop; do
+    echo "[BASE] Installing base packages (target: $ENVIRONMENT)..."
+    local pkgs=(curl htop tree vim wget tmux zsh)
+    # GNOME shell integration and the GPU monitor are desktop-only.
+    if [ "$ENVIRONMENT" = "native" ]; then
+        pkgs+=(chrome-gnome-shell nvtop)
+    fi
+    for pkg in "${pkgs[@]}"; do
         install_pkg "$pkg"
     done
     [ "$SHELL" = "/usr/bin/zsh" ] || chsh -s /usr/bin/zsh
 }
 
+# --- Install target detection ---
+
+# Echo "wsl" when running under Windows Subsystem for Linux, else "native".
+function detect_environment {
+    if [ -n "${WSL_DISTRO_NAME:-}" ] || grep -qiE 'microsoft|wsl' /proc/version 2>/dev/null; then
+        echo "wsl"
+    else
+        echo "native"
+    fi
+}
+
+# True if program key $1 is desktop/hardware-only (skipped by default on WSL).
+function is_native_only {
+    [[ "$NATIVE_ONLY_PROGRAMS" == *" $1 "* ]]
+}
+
+# Interactive prompt to confirm/override the detected install target.
+function choose_environment {
+    local detected="$1" line
+    echo ""
+    echo "Install target (detected: $detected):"
+    echo "  1) Native Ubuntu (desktop)"
+    echo "  2) WSL (Windows Subsystem for Linux)"
+    printf '> '
+    if ! read -r line; then line=""; fi
+    case "$line" in
+        1) ENVIRONMENT="native" ;;
+        2) ENVIRONMENT="wsl" ;;
+        *) ENVIRONMENT="$detected" ;;
+    esac
+    echo "Target: $ENVIRONMENT"
+}
+
 # --- Selection plan ---
 
 # Populate the ITEM_* arrays: two built-in phases followed by one entry per
-# program script discovered in PROGRAMS_DIR. Everything starts selected.
+# program script discovered in PROGRAMS_DIR. Defaults respect ENVIRONMENT:
+# desktop/hardware-only programs start deselected on WSL.
 function build_plan {
     ITEM_KEYS=(); ITEM_LABELS=(); ITEM_TYPES=(); ITEM_SCRIPTS=(); ITEM_ON=()
 
     ITEM_KEYS+=("system_update"); ITEM_LABELS+=("system update (apt update + full-upgrade)"); ITEM_TYPES+=("phase"); ITEM_SCRIPTS+=(""); ITEM_ON+=(1)
     ITEM_KEYS+=("base");          ITEM_LABELS+=("base packages (zsh, curl, vim, tmux...)");    ITEM_TYPES+=("phase"); ITEM_SCRIPTS+=(""); ITEM_ON+=(1)
 
-    local script name
+    local script name label on
     for script in "$PROGRAMS_DIR"/*.sh; do
         [ -f "$script" ] || continue
         name="$(basename "$script" .sh)"
-        ITEM_KEYS+=("$name"); ITEM_LABELS+=("$name"); ITEM_TYPES+=("program"); ITEM_SCRIPTS+=("$script"); ITEM_ON+=(1)
+        label="$name"
+        on=1
+        if is_native_only "$name"; then
+            label="$name (desktop/native)"
+            [ "$ENVIRONMENT" = "wsl" ] && on=0
+        fi
+        ITEM_KEYS+=("$name"); ITEM_LABELS+=("$label"); ITEM_TYPES+=("program"); ITEM_SCRIPTS+=("$script"); ITEM_ON+=("$on")
     done
 }
 
@@ -239,13 +294,19 @@ function usage {
     cat <<EOF
 Usage: bash scripts/install.sh [options]
 
-Pick which phases and programs to install. With no options and an interactive
-terminal, an interactive menu is shown. Stow symlinks are always applied.
+Pick the install target (native Ubuntu or WSL) and which phases and programs
+to install. With no options and an interactive terminal, you are prompted for
+the target and shown a selection menu. Stow symlinks are always applied.
 
 Options:
   -a, --all      Install everything without prompting (required when there is
-                 no interactive terminal, e.g. piped input or CI).
+                 no interactive terminal, e.g. piped input or CI). Respects the
+                 target: desktop/hardware-only programs are skipped on WSL.
+      --native   Force the install target to native Ubuntu (skip the prompt).
+      --wsl      Force the install target to WSL (skip the prompt).
   -h, --help     Show this help and exit.
+
+If neither --native nor --wsl is given, the target is auto-detected.
 EOF
 }
 
@@ -253,9 +314,12 @@ EOF
 
 if [[ "${BASH_SOURCE[0]}" == "${0}" ]]; then
     RUN_ALL=0
+    ENV_OVERRIDE=""
     while [ $# -gt 0 ]; do
         case "$1" in
             -a|--all|-y|--yes) RUN_ALL=1 ;;
+            --native) ENV_OVERRIDE="native" ;;
+            --wsl)    ENV_OVERRIDE="wsl" ;;
             -h|--help) usage; exit 0 ;;
             *) echo "Unknown option: $1" >&2; usage >&2; exit 2 ;;
         esac
@@ -272,14 +336,25 @@ if [[ "${BASH_SOURCE[0]}" == "${0}" ]]; then
     # Disabling the cdrom source and applying symlinks always happen first.
     disable_cdrom_source
 
-    build_plan
-    if [ "$RUN_ALL" -eq 1 ]; then
-        set_all 1
+    # Resolve the install target before building the plan (it drives defaults).
+    detected="$(detect_environment)"
+    if [ -n "$ENV_OVERRIDE" ]; then
+        ENVIRONMENT="$ENV_OVERRIDE"
+        echo "Install target: $ENVIRONMENT"
+    elif [ "$RUN_ALL" -eq 1 ]; then
+        ENVIRONMENT="$detected"
+        echo "Install target (auto-detected): $ENVIRONMENT"
     elif [ -t 0 ]; then
-        select_menu
+        choose_environment "$detected"
     else
-        echo "No interactive terminal detected. Re-run with --all to install everything." >&2
+        echo "No interactive terminal detected. Re-run with --all (optionally --wsl/--native)." >&2
         exit 2
+    fi
+
+    build_plan
+    # --all accepts the target-aware defaults; interactively, refine via the menu.
+    if [ "$RUN_ALL" -ne 1 ] && [ -t 0 ]; then
+        select_menu
     fi
 
     apply_stow
