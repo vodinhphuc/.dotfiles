@@ -350,6 +350,8 @@ if [[ "${BASH_SOURCE[0]}" == "${0}" ]]; then
         echo "No interactive terminal detected. Re-run with --all (optionally --wsl/--native)." >&2
         exit 2
     fi
+    # Propagate the target to program scripts (e.g. neovim.sh picks tarball vs snap).
+    export ENVIRONMENT
 
     build_plan
     # --all accepts the target-aware defaults; interactively, refine via the menu.

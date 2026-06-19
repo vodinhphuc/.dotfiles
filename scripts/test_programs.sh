@@ -162,6 +162,31 @@ assert_output_contains "neovim.sh notes missing go toolchain" "Mason will skip g
 # Cleanup: remove the logging mocks so they don't affect later tests
 rm -f "$BIN_DIR/apt-get" "$BIN_DIR/snap" "$BIN_DIR/npm" "$BIN_DIR/sudo"
 
+# --- neovim.sh: WSL target installs from tarball, never snap ---
+echo ""
+echo "=== neovim.sh: WSL installs from release tarball, not snap ==="
+NEOVIM_WSL_LOG="$TEST_DIR/neovim_wsl_calls.log"
+: > "$NEOVIM_WSL_LOG"
+# sudo mock that LOGS only (never executes) so /opt is never touched
+for cmd in sudo curl apt-get npm; do
+    cat > "$BIN_DIR/$cmd" <<EOF
+#!/bin/bash
+echo "$cmd \$*" >> "$NEOVIM_WSL_LOG"
+exit 0
+EOF
+    chmod +x "$BIN_DIR/$cmd"
+done
+# The WSL branch needs real uname/mktemp/rm; symlink them into BIN_DIR so we can
+# keep PATH isolated (PATH=$BIN_DIR only) and hide any real nvim on the system.
+for bin in uname mktemp rm; do ln -sf "$(command -v "$bin")" "$BIN_DIR/$bin"; done
+output=$(PATH="$BIN_DIR" ENVIRONMENT=wsl /bin/bash "$DOTFILES_DIR/scripts/programs/neovim.sh" 2>&1) || true
+log_content="$(cat "$NEOVIM_WSL_LOG" 2>/dev/null)"
+assert_output_contains "WSL neovim.sh downloads the official release tarball" "neovim/releases/latest/download" "$log_content"
+assert_output_contains "WSL neovim.sh symlinks nvim onto PATH" "ln -sf /opt/nvim/bin/nvim" "$log_content"
+assert_output_not_contains "WSL neovim.sh does NOT use snap" "snap install" "$log_content"
+assert_output_contains "WSL neovim.sh still installs ripgrep dep" "ripgrep" "$log_content"
+rm -f "$BIN_DIR/sudo" "$BIN_DIR/curl" "$BIN_DIR/apt-get" "$BIN_DIR/npm" "$BIN_DIR/uname" "$BIN_DIR/mktemp" "$BIN_DIR/rm"
+
 # --- miniconda.sh: skip when miniconda3 dir exists ---
 echo ""
 echo "=== miniconda.sh: skip when already installed ==="
