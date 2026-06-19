@@ -63,7 +63,7 @@ Current scripts:
 | `glow.sh` | glow (Charm apt repo) + bat (markdown / syntax-highlighted reading) |
 | `ibus_unikey.sh` | ibus, ibus-unikey, configures GNOME input sources |
 | `miniconda.sh` | Miniconda3 to `~/miniconda3` |
-| `neovim.sh` | Neovim (snap) + IDE deps + tree-sitter CLI |
+| `neovim.sh` | Neovim (snap on native, official release tarball on WSL) + IDE deps + tree-sitter CLI |
 | `terminator.sh` | Terminator, sets as default terminal (Ctrl+Alt+T) |
 | `tpm.sh` | Tmux Plugin Manager |
 | `uv.sh` | uv + uvx (Python pkg/project manager), pre-generates zsh completions to `~/.config/uv` |
