@@ -33,10 +33,11 @@ The repo root is a stow package. `stow .` creates symlinks in `~/` that mirror t
 
 Orchestrator. Runs once on a fresh machine (or resumes after failure):
 
-1. `apt update && apt full-upgrade`
-2. Install `stow`, apply symlinks
-3. Install base packages (`zsh`, `curl`, `vim`, `tmux`, …)
-4. Loop over `scripts/programs/*.sh`, running each via `run_step`
+1. Disable the install-media (`cdrom`) apt source so `apt update` can't break
+2. `apt update && apt full-upgrade`
+3. Install `stow`, apply symlinks
+4. Install base packages (`zsh`, `curl`, `vim`, `tmux`, …)
+5. Loop over `scripts/programs/*.sh`, running each via `run_step`
 
 State is persisted in `.install_state` (completed steps), `.install_errors` (failed steps), and `.install.log` (full output). Re-running skips completed steps.
 

@@ -6,6 +6,10 @@ STATE_FILE="${STATE_FILE:-$DOTFILES_DIR/.install_state}"
 ERRORS_FILE="${ERRORS_FILE:-$DOTFILES_DIR/.install_errors}"
 LOG_FILE="${LOG_FILE:-$DOTFILES_DIR/.install.log}"
 
+# apt source paths (overridable so tests can target temp dirs)
+APT_SOURCES_LIST="${APT_SOURCES_LIST:-/etc/apt/sources.list}"
+APT_SOURCES_DIR="${APT_SOURCES_DIR:-/etc/apt/sources.list.d}"
+
 declare -a STEPS_OK=()
 declare -a STEPS_SKIP=()
 declare -a STEPS_FAIL=()
@@ -43,7 +47,33 @@ function run_step {
     fi
 }
 
+# A fresh Ubuntu install leaves the install media as an apt source
+# (`deb cdrom:[...]` / `file:/cdrom`). Once the ISO/USB is unmounted, every
+# `apt update` errors out ("no longer has a Release file"), which aborts any
+# program script that refreshes apt (e.g. glow.sh). Disable it up front.
+function disable_cdrom_source {
+    echo "[SYS] Disabling CD-ROM apt sources (if any)..."
+    # Legacy one-line format (.list): comment out any deb line that uses cdrom
+    for f in "$APT_SOURCES_LIST" "$APT_SOURCES_DIR"/*.list; do
+        [ -f "$f" ] || continue
+        if grep -Eq '^[[:space:]]*deb.*cdrom' "$f"; then
+            sudo sed -i -E '/^[[:space:]]*deb.*cdrom/ s/^/#/' "$f"
+            echo "  disabled cdrom entries in $f"
+        fi
+    done
+    # deb822 format (.sources): disable any stanza file that references cdrom
+    for f in "$APT_SOURCES_DIR"/*.sources; do
+        [ -f "$f" ] || continue
+        if grep -Eiq 'cdrom|file:/cdrom' "$f"; then
+            sudo mv "$f" "$f.disabled"
+            echo "  disabled cdrom source file $f"
+        fi
+    done
+}
+
 function fix_system {
+    disable_cdrom_source
+
     echo "[SYS] Running apt update..."
     sudo apt update && sudo apt full-upgrade -y
 

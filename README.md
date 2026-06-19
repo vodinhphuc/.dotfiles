@@ -53,10 +53,11 @@ cd ~/.dotfiles && bash scripts/install.sh
 ```
 
 The installer will:
-1. Run `apt update && apt full-upgrade`
-2. Install `stow` and apply dotfile symlinks
-3. Install base packages
-4. Run every script in `scripts/programs/` in alphabetical order
+1. Disable the install-media (`cdrom`) apt source so `apt update` can't break
+2. Run `apt update && apt full-upgrade`
+3. Install `stow` and apply dotfile symlinks
+4. Install base packages
+5. Run every script in `scripts/programs/` in alphabetical order
 
 Progress is saved in `.install_state`. If the installer is interrupted, re-run it — completed steps are skipped automatically.
 

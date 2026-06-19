@@ -99,6 +99,28 @@ STEPS_OK=(); STEPS_SKIP=(); STEPS_FAIL=()
 run_step "test_exit_trap" <(printf '#!/bin/bash\nexit 42')
 assert_equals "orchestrator still running after exit 42" "test_exit_trap" "${STEPS_FAIL[0]:-}"
 
+echo ""
+echo "=== Test: disable_cdrom_source comments .list and disables .sources ==="
+# Mock sudo to passthrough so the function can edit temp files without root
+sudo() { "$@"; }
+APT_SOURCES_LIST="$TEST_DIR/sources.list"
+APT_SOURCES_DIR="$TEST_DIR/sources.list.d"
+mkdir -p "$APT_SOURCES_DIR"
+printf 'deb cdrom:[Ubuntu]/ questing main\ndeb http://archive.ubuntu.com/ubuntu questing main\n' > "$APT_SOURCES_LIST"
+printf 'deb [signed-by=/x] file:/cdrom questing main\n' > "$APT_SOURCES_DIR/cdrom.list"
+printf 'Types: deb\nURIs: file:/cdrom\nSuites: questing\n' > "$APT_SOURCES_DIR/cdrom.sources"
+printf 'Types: deb\nURIs: http://archive.ubuntu.com/ubuntu\nSuites: questing\n' > "$APT_SOURCES_DIR/ubuntu.sources"
+disable_cdrom_source >/dev/null
+
+assert_equals "cdrom line in sources.list commented" "#deb cdrom:[Ubuntu]/ questing main" "$(sed -n '1p' "$APT_SOURCES_LIST")"
+assert_equals "non-cdrom line in sources.list untouched" "deb http://archive.ubuntu.com/ubuntu questing main" "$(sed -n '2p' "$APT_SOURCES_LIST")"
+assert_equals "cdrom .list commented" "#deb [signed-by=/x] file:/cdrom questing main" "$(cat "$APT_SOURCES_DIR/cdrom.list")"
+[ ! -f "$APT_SOURCES_DIR/cdrom.sources" ] && [ -f "$APT_SOURCES_DIR/cdrom.sources.disabled" ]
+assert_equals "cdrom .sources renamed to .disabled" "0" "$?"
+[ -f "$APT_SOURCES_DIR/ubuntu.sources" ]
+assert_equals "non-cdrom .sources left in place" "0" "$?"
+unset -f sudo
+
 # --- Summary ---
 echo ""
 echo "=========================================="
