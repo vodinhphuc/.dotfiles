@@ -121,6 +121,32 @@ assert_equals "cdrom .sources renamed to .disabled" "0" "$?"
 assert_equals "non-cdrom .sources left in place" "0" "$?"
 unset -f sudo
 
+echo ""
+echo "=== Test: build_plan discovers program scripts + phases ==="
+PROGRAMS_DIR="$TEST_DIR/programs"
+mkdir -p "$PROGRAMS_DIR"
+: > "$PROGRAMS_DIR/alpha.sh"
+: > "$PROGRAMS_DIR/beta.sh"
+build_plan
+assert_equals "first item is system_update phase" "system_update" "${ITEM_KEYS[0]}"
+assert_equals "second item is base phase" "base" "${ITEM_KEYS[1]}"
+assert_equals "program scripts discovered (2 phases + 2 progs)" "4" "${#ITEM_KEYS[@]}"
+assert_equals "alpha program present" "alpha" "${ITEM_KEYS[2]}"
+assert_equals "everything starts selected" "1" "${ITEM_ON[3]}"
+
+echo ""
+echo "=== Test: toggle / set_all / is_selected ==="
+toggle_item 4    # turn off beta (index 3)
+assert_equals "toggle_item turns beta off" "0" "${ITEM_ON[3]}"
+toggle_item 4    # back on
+assert_equals "toggle_item turns beta back on" "1" "${ITEM_ON[3]}"
+toggle_item 99   # out of range -> no-op, no crash
+assert_equals "out-of-range toggle is a no-op" "1" "${ITEM_ON[3]}"
+set_all 0
+is_selected system_update; assert_equals "set_all 0 deselects system_update" "1" "$?"
+set_all 1
+is_selected system_update; assert_equals "set_all 1 selects system_update" "0" "$?"
+
 # --- Summary ---
 echo ""
 echo "=========================================="

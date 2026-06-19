@@ -9,8 +9,11 @@ Automates setting up a Ubuntu desktop environment. GNU Stow manages dotfile syml
 ## Key commands
 
 ```bash
-# Full install (run from ~/.dotfiles on a fresh or existing machine)
+# Interactive install (run from ~/.dotfiles) — pick phases & programs from a menu
 bash scripts/install.sh
+
+# Non-interactive: install everything (required when there is no TTY, e.g. CI)
+bash scripts/install.sh --all
 
 # Re-apply stow symlinks after adding a new dotfile
 stow .
@@ -33,13 +36,14 @@ The repo root is a stow package. `stow .` creates symlinks in `~/` that mirror t
 
 Orchestrator. Runs once on a fresh machine (or resumes after failure):
 
-1. Disable the install-media (`cdrom`) apt source so `apt update` can't break
-2. `apt update && apt full-upgrade`
-3. Install `stow`, apply symlinks
-4. Install base packages (`zsh`, `curl`, `vim`, `tmux`, …)
-5. Loop over `scripts/programs/*.sh`, running each via `run_step`
+1. Parse flags (`--all`/`-a` to skip the menu, `--help`/`-h`)
+2. Disable the install-media (`cdrom`) apt source so `apt update` can't break
+3. `build_plan` discovers the two phases (`system update`, `base packages`) plus one entry per `scripts/programs/*.sh`
+4. Selection: `--all` selects everything; an interactive TTY shows `select_menu` (toggle by number, `a`/`n`/`q`, Enter to confirm); no TTY without `--all` errors out
+5. `apply_stow` (always) installs `stow` and applies symlinks
+6. `run_plan` runs the selected phases (`system_update`, `install_base`) and programs (via `run_step`); `apt upgrade`/`autoremove` run only if `system update` was selected
 
-State is persisted in `.install_state` (completed steps), `.install_errors` (failed steps), and `.install.log` (full output). Re-running skips completed steps.
+The selectable plan lives in the parallel arrays `ITEM_KEYS`/`ITEM_LABELS`/`ITEM_TYPES`/`ITEM_SCRIPTS`/`ITEM_ON`. State is persisted in `.install_state` (completed steps), `.install_errors` (failed steps), and `.install.log` (full output). Re-running skips completed steps.
 
 ### `scripts/programs/`
 

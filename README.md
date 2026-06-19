@@ -52,12 +52,22 @@ git clone git@github.com:vodinhphuc/.dotfiles.git ~/.dotfiles
 cd ~/.dotfiles && bash scripts/install.sh
 ```
 
+This opens an interactive menu where you toggle which phases and programs to
+install (type a number to toggle, `a`/`n` for all/none, `q` to quit, Enter to
+confirm). To skip the menu and install everything, pass `--all`:
+
+```bash
+cd ~/.dotfiles && bash scripts/install.sh --all
+```
+
+`--all` is **required** when there is no interactive terminal (e.g. piped input
+or CI), otherwise the installer exits with a message.
+
 The installer will:
 1. Disable the install-media (`cdrom`) apt source so `apt update` can't break
-2. Run `apt update && apt full-upgrade`
-3. Install `stow` and apply dotfile symlinks
-4. Install base packages
-5. Run every script in `scripts/programs/` in alphabetical order
+2. Let you choose phases (`system update`, `base packages`) and individual programs
+3. Always install `stow` and apply dotfile symlinks
+4. Run the selected phases and `scripts/programs/` scripts (alphabetical order)
 
 Progress is saved in `.install_state`. If the installer is interrupted, re-run it — completed steps are skipped automatically.
 
