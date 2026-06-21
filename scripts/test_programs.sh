@@ -245,6 +245,16 @@ assert_output_contains "glow.sh (bat-block) prints 'Already installed: glow'" "A
 assert_output_contains "glow.sh prints 'Already installed: bat'" "Already installed: bat" "$output"
 rm -f "$BIN_DIR/glow" "$BIN_DIR/batcat"
 
+# --- gh.sh: skip when gh already in PATH ---
+echo ""
+echo "=== gh.sh: skip when already installed ==="
+mock_cmd gh
+output=$(PATH="$BIN_DIR:$PATH" bash "$DOTFILES_DIR/scripts/programs/gh.sh" 2>&1)
+code=$?
+assert_exit_zero "gh.sh exits 0 when already installed" "$code"
+assert_output_contains "gh.sh prints 'Already installed: gh'" "Already installed: gh" "$output"
+rm -f "$BIN_DIR/gh"
+
 # --- terminator.sh: should NOT say "Already installed" when terminator is absent ---
 echo ""
 echo "=== terminator.sh: does NOT say 'Already installed' when terminator is absent ==="
