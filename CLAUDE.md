@@ -67,7 +67,7 @@ Current scripts:
 | `terminator.sh` | Terminator, sets as default terminal (Ctrl+Alt+T) |
 | `tpm.sh` | Tmux Plugin Manager |
 | `uv.sh` | uv + uvx (Python pkg/project manager), pre-generates zsh completions to `~/.config/uv` |
-| `visual_code.sh` | VS Code (snap) |
+| `visual_code.sh` | VS Code (Microsoft apt repo — unconfined so ibus input methods work) |
 
 ## How to extend
 
