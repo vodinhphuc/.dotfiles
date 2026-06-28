@@ -205,41 +205,52 @@ function is_selected {
     return 1
 }
 
-function render_menu {
-    local i mark
-    echo ""
-    echo "Select what to install (toggle by number, Enter to confirm):"
-    echo ""
-    echo "  Phases:"
+# Build the lines to display, into MENU_OUT. A header precedes each group
+# (Phases, Programs); the highlighted row (index $CURSOR) gets a ❯ pointer.
+# Line count stays constant across redraws so select_menu can overwrite in place.
+function _menu_compose {
+    MENU_OUT=()
+    MENU_OUT+=("Select what to install  (↑/↓ move · space toggle · a/n all/none · enter confirm · q quit)")
+    MENU_OUT+=("")
+    local i mark pointer lasttype=""
     for i in "${!ITEM_KEYS[@]}"; do
-        [ "${ITEM_TYPES[$i]}" = "phase" ] || continue
+        if [ "${ITEM_TYPES[$i]}" != "$lasttype" ]; then
+            [ -n "$lasttype" ] && MENU_OUT+=("")
+            lasttype="${ITEM_TYPES[$i]}"
+            [ "$lasttype" = "phase" ] && MENU_OUT+=("  Phases") || MENU_OUT+=("  Programs")
+        fi
         [ "${ITEM_ON[$i]}" -eq 1 ] && mark="x" || mark=" "
-        printf "  [%s] %2d) %s\n" "$mark" "$((i + 1))" "${ITEM_LABELS[$i]}"
+        [ "$i" -eq "$CURSOR" ] && pointer="❯" || pointer=" "
+        MENU_OUT+=("  $pointer [$mark] ${ITEM_LABELS[$i]}")
     done
-    echo ""
-    echo "  Programs:"
-    for i in "${!ITEM_KEYS[@]}"; do
-        [ "${ITEM_TYPES[$i]}" = "program" ] || continue
-        [ "${ITEM_ON[$i]}" -eq 1 ] && mark="x" || mark=" "
-        printf "  [%s] %2d) %s\n" "$mark" "$((i + 1))" "${ITEM_LABELS[$i]}"
-    done
-    echo ""
-    echo "  a) all   n) none   q) quit   Enter) confirm"
 }
 
-# Interactive toggle loop. Accepts space-separated numbers, a/n/q, or Enter.
+# Interactive checklist: arrow keys (or j/k) move, space toggles, a/n select
+# all/none, Enter confirms, q aborts. Redraws in place over a real terminal.
 function select_menu {
-    local line tok
+    local total=${#ITEM_KEYS[@]} key rest first=1 line
+    [ "$total" -gt 0 ] || return 0
+    CURSOR=0
+    printf '\033[?25l'                                   # hide the terminal cursor
     while true; do
-        render_menu
-        printf '> '
-        if ! read -r line; then line="q"; fi
-        case "$line" in
-            "") return 0 ;;
-            a|A|all)  set_all 1 ;;
-            n|N|none) set_all 0 ;;
-            q|Q|quit) echo "Aborted — nothing installed."; exit 0 ;;
-            *) for tok in $line; do toggle_item "$tok"; done ;;
+        _menu_compose
+        [ "$first" -eq 1 ] && first=0 || printf '\033[%dA' "${#MENU_OUT[@]}"
+        for line in "${MENU_OUT[@]}"; do printf '\033[2K%s\n' "$line"; done
+        IFS= read -rsn1 key || key=""                    # EOF -> "" -> confirm
+        case "$key" in
+            $'\x1b')                                     # escape sequence (arrow keys)
+                read -rsn2 -t 0.05 rest || rest=""
+                case "$rest" in
+                    *A) CURSOR=$(( (CURSOR - 1 + total) % total )) ;;   # up
+                    *B) CURSOR=$(( (CURSOR + 1) % total )) ;;           # down
+                esac ;;
+            ' ')  toggle_item "$((CURSOR + 1))" ;;
+            k|K)  CURSOR=$(( (CURSOR - 1 + total) % total )) ;;
+            j|J)  CURSOR=$(( (CURSOR + 1) % total )) ;;
+            a|A)  set_all 1 ;;
+            n|N)  set_all 0 ;;
+            q|Q)  printf '\033[?25h'; echo "Aborted — nothing installed."; exit 0 ;;
+            '')   printf '\033[?25h'; return 0 ;;         # Enter -> confirm
         esac
     done
 }
@@ -352,12 +363,6 @@ if [[ "${BASH_SOURCE[0]}" == "${0}" ]]; then
     fi
     # Propagate the target to program scripts (e.g. neovim.sh picks tarball vs snap).
     export ENVIRONMENT
-
-    build_plan
-    # --all accepts the target-aware defaults; interactively, refine via the menu.
-    if [ "$RUN_ALL" -ne 1 ] && [ -t 0 ]; then
-        select_menu
-    fi
 
     build_plan
     # --all accepts the target-aware defaults; interactively, refine via the menu.
