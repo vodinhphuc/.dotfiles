@@ -60,6 +60,7 @@ Current scripts:
 | `custome_zsh.sh` | oh-my-zsh, antigen, powerlevel10k, conda-zsh-completion |
 | `docker.sh` | Docker (snap), adds user to `docker` group |
 | `fan_control.sh` | lm-sensors + fancontrol, persists `nct6775` kernel module |
+| `gh.sh` | GitHub CLI (`gh`) from GitHub's official apt repo |
 | `glow.sh` | glow (Charm apt repo) + bat (markdown / syntax-highlighted reading) |
 | `ibus_unikey.sh` | ibus, ibus-unikey, configures GNOME input sources |
 | `miniconda.sh` | Miniconda3 to `~/miniconda3` |
