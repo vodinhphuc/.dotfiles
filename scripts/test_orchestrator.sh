@@ -59,6 +59,7 @@ touch "$ERRORS_FILE"
 
 # Source only the functions (not main body) from install.sh
 # Then disable set -e so test assertions can handle failures gracefully
+# shellcheck source=scripts/install.sh
 source "$DOTFILES_DIR/scripts/install.sh"
 set +e
 
@@ -115,10 +116,10 @@ disable_cdrom_source >/dev/null
 assert_equals "cdrom line in sources.list commented" "#deb cdrom:[Ubuntu]/ questing main" "$(sed -n '1p' "$APT_SOURCES_LIST")"
 assert_equals "non-cdrom line in sources.list untouched" "deb http://archive.ubuntu.com/ubuntu questing main" "$(sed -n '2p' "$APT_SOURCES_LIST")"
 assert_equals "cdrom .list commented" "#deb [signed-by=/x] file:/cdrom questing main" "$(cat "$APT_SOURCES_DIR/cdrom.list")"
-[ ! -f "$APT_SOURCES_DIR/cdrom.sources" ] && [ -f "$APT_SOURCES_DIR/cdrom.sources.disabled" ]
-assert_equals "cdrom .sources renamed to .disabled" "0" "$?"
-[ -f "$APT_SOURCES_DIR/ubuntu.sources" ]
-assert_equals "non-cdrom .sources left in place" "0" "$?"
+if [ ! -f "$APT_SOURCES_DIR/cdrom.sources" ] && [ -f "$APT_SOURCES_DIR/cdrom.sources.disabled" ]; then rc=0; else rc=1; fi
+assert_equals "cdrom .sources renamed to .disabled" "0" "$rc"
+if [ -f "$APT_SOURCES_DIR/ubuntu.sources" ]; then rc=0; else rc=1; fi
+assert_equals "non-cdrom .sources left in place" "0" "$rc"
 unset -f sudo
 
 echo ""

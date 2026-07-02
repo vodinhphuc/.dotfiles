@@ -182,7 +182,7 @@ function build_plan {
 # Set every item's selection to $1 (0 or 1).
 function set_all {
     local v="$1" i
-    for i in "${!ITEM_ON[@]}"; do ITEM_ON[$i]="$v"; done
+    for i in "${!ITEM_ON[@]}"; do ITEM_ON[i]="$v"; done
 }
 
 # Toggle the item at the 1-based position $1. Ignores out-of-range/non-numeric.
@@ -191,7 +191,7 @@ function toggle_item {
     [[ "$n" =~ ^[0-9]+$ ]] || return 0
     idx=$((n - 1))
     [ "$idx" -ge 0 ] && [ "$idx" -lt "${#ITEM_ON[@]}" ] || return 0
-    if [ "${ITEM_ON[$idx]}" -eq 1 ]; then ITEM_ON[$idx]=0; else ITEM_ON[$idx]=1; fi
+    if [ "${ITEM_ON[$idx]}" -eq 1 ]; then ITEM_ON[idx]=0; else ITEM_ON[idx]=1; fi
 }
 
 # Return 0 if the item with key $1 is currently selected.
@@ -340,7 +340,7 @@ if [[ "${BASH_SOURCE[0]}" == "${0}" ]]; then
     echo "Current working directory is: $(pwd)"
 
     # Clear errors file; append run separator to log
-    > "$ERRORS_FILE"
+    : > "$ERRORS_FILE"
     echo "" >> "$LOG_FILE"
     echo "=== Install run: $(date) ===" >> "$LOG_FILE"
 
