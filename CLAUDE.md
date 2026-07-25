@@ -68,7 +68,10 @@ Current scripts:
 | `ibus_unikey.sh` | ibus, ibus-unikey, configures GNOME input sources |
 | `miniconda.sh` | Miniconda3 to `~/miniconda3` |
 | `neovim.sh` | Neovim (snap on native, official release tarball on WSL) + IDE deps + tree-sitter CLI |
+| `openrgb.sh` | OpenRGB + i2c-tools; turns all RGB LEDs off now and via a boot-time systemd service (native-only) |
+
 | `shellcheck.sh` | shellcheck (static analysis linter for the repo's shell scripts) |
+
 | `terminator.sh` | Terminator, sets as default terminal (Ctrl+Alt+T) |
 | `tpm.sh` | Tmux Plugin Manager |
 | `uv.sh` | uv + uvx (Python pkg/project manager), pre-generates zsh completions to `~/.config/uv` |
