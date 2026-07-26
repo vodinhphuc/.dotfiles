@@ -68,6 +68,8 @@ Current scripts:
 | `ibus_unikey.sh` | ibus, ibus-unikey, configures GNOME input sources |
 | `miniconda.sh` | Miniconda3 to `~/miniconda3` |
 | `neovim.sh` | Neovim (snap on native, official release tarball on WSL) + IDE deps + tree-sitter CLI |
+| `openrgb.sh` | OpenRGB + i2c-tools; turns all RGB LEDs off now and via a boot-time systemd service (native-only). Per-device control: `.local/bin/rgb` / `docs/guides/rgb.md` |
+
 | `openrgb.sh` | OpenRGB + i2c-tools; turns all RGB LEDs off now and via a boot-time systemd service (native-only) |
 
 | `shellcheck.sh` | shellcheck (static analysis linter for the repo's shell scripts) |
@@ -76,6 +78,10 @@ Current scripts:
 | `tpm.sh` | Tmux Plugin Manager |
 | `uv.sh` | uv + uvx (Python pkg/project manager), pre-generates zsh completions to `~/.config/uv` |
 | `visual_code.sh` | VS Code (Microsoft apt repo — unconfined so ibus input methods work) |
+
+### `.local/bin/rgb`
+
+Friendly per-device wrapper around OpenRGB (stowed onto `PATH`), companion to `scripts/programs/openrgb.sh`. Subcommands `list`/`status`/`colors`/`off`/`on`/`mode`/`persist` mirror the `.local/bin/fan` CLI style. Targets a device by index or case-insensitive name substring (omit = all); accepts named colors or 6-digit hex. `rgb persist on|off` toggles the `openrgb-off.service` boot service, and `on`/`mode` warn when that service will override the change at next boot. Testable via env hooks `OPENRGB_BIN`, `RGB_DRY_RUN=1`, `RGB_SUDO=` (unit-tested in `scripts/test_rgb_cli.sh`, dispatched from `test_programs.sh`). Full reference: `docs/guides/rgb.md`.
 
 ### `scripts/mount_disk.sh`
 

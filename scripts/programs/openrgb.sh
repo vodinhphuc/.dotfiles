@@ -84,4 +84,10 @@ touch them — disable them in the BIOS/UEFI instead:
   Gigabyte -> RGB Fusion     (set to Off)
 
 Debug detected controllers with: sudo openrgb --list-devices
+
+For per-device control (colors, on/off, effects), use the 'rgb' helper:
+  rgb list            # see devices
+  rgb on ram red      # set the RAM to red
+  rgb off             # everything off
+  rgb --help
 EOF

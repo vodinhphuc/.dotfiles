@@ -1,0 +1,261 @@
+#!/bin/bash
+set -euo pipefail
+
+# rgb — friendly per-device control of OpenRGB (RAM, motherboard, GPU, ...).
+# Companion to scripts/programs/openrgb.sh. Targets devices by name or index,
+# accepts named colors or raw hex, and can manage the openrgb-off boot service.
+
+OPENRGB_BIN="${OPENRGB_BIN:-openrgb}"
+RGB_DRY_RUN="${RGB_DRY_RUN:-0}"
+
+# OpenRGB needs root for the RAM/motherboard SMBus. RGB_SUDO defaults to "sudo";
+# set it empty (RGB_SUDO=) to drop the prefix (tests, or already-root shells).
+if [ -z "${RGB_SUDO+x}" ]; then
+    SUDO=(sudo)
+elif [ -n "$RGB_SUDO" ]; then
+    SUDO=("$RGB_SUDO")
+else
+    SUDO=()
+fi
+
+RESOLVED_DEV=()
+
+usage() {
+    cat <<'EOF'
+Usage: rgb <command> [args]
+
+Commands:
+  list                       List detected devices with their index and name
+  status                     Show devices and the openrgb-off boot-service state
+  colors                     Print the named-color palette
+  off  [target]              Turn a device (or all) off
+  on   [target] [COLOR]      Turn a device (or all) on (COLOR default: white)
+  mode <MODE> [target]       Set an effect: static, rainbow, breathing, ...
+  persist <on|off>           on = force off at every boot; off = keep your colors
+  help, -h, --help           Show this help
+
+Target:
+  omitted / all              every device
+  <index>                    a number from 'rgb list' (e.g. 0, 1)
+  <name>                     case-insensitive name substring (e.g. ram, aura)
+
+COLOR (see 'rgb colors'):
+  a name (red, white, off, ...) or any 6-digit hex (with or without '#')
+
+  With one argument, 'on' treats a known color as the color for ALL devices
+  (rgb on red), otherwise as the target (rgb on ram -> ram, default white).
+
+Environment:
+  OPENRGB_BIN                openrgb binary (default: openrgb)
+  RGB_DRY_RUN=1              print commands instead of running them
+  RGB_SUDO=                  drop the sudo prefix
+EOF
+}
+
+# --- device discovery -------------------------------------------------------
+
+# Numbered header lines from OpenRGB, e.g. "0: ASUS Aura Motherboard".
+device_lines() {
+    "${SUDO[@]}" "$OPENRGB_BIN" --list-devices 2>/dev/null | grep -E '^[0-9]+:' || true
+}
+
+# Populate RESOLVED_DEV with the --device flag for a target (empty = all).
+resolve_target() {
+    local target="${1:-all}"
+    RESOLVED_DEV=()
+    [ "$target" = "all" ] && return 0
+
+    local lines
+    lines="$(device_lines)"
+
+    if [[ "$target" =~ ^[0-9]+$ ]]; then
+        if echo "$lines" | grep -qE "^$target:"; then
+            RESOLVED_DEV=(--device "$target")
+            return 0
+        fi
+        echo "No device with index $target. Available devices:" >&2
+        echo "${lines:-  (none — is openrgb installed and are i2c modules loaded?)}" >&2
+        return 1
+    fi
+
+    local target_lc="${target,,}" idxs=() labels=()
+    while IFS= read -r line; do
+        [ -z "$line" ] && continue
+        local idx="${line%%:*}" name="${line#*: }"
+        if [[ "${name,,}" == *"$target_lc"* ]]; then
+            idxs+=("$idx")
+            labels+=("$line")
+        fi
+    done <<< "$lines"
+
+    case "${#idxs[@]}" in
+        1) RESOLVED_DEV=(--device "${idxs[0]}"); return 0 ;;
+        0)
+            echo "No device matching '$target'. Available devices:" >&2
+            echo "${lines:-  (none — is openrgb installed and are i2c modules loaded?)}" >&2
+            return 1 ;;
+        *)
+            echo "'$target' matches multiple devices — be more specific:" >&2
+            printf '  %s\n' "${labels[@]}" >&2
+            return 1 ;;
+    esac
+}
+
+# --- colors -----------------------------------------------------------------
+
+# Print the resolved uppercase hex for a name or hex string; fail if invalid.
+resolve_color() {
+    local c="${1,,}"
+    c="${c#\#}"
+    case "$c" in
+        off|black) echo 000000 ;;
+        white)     echo FFFFFF ;;
+        red)       echo FF0000 ;;
+        green)     echo 00FF00 ;;
+        blue)      echo 0000FF ;;
+        yellow)    echo FFFF00 ;;
+        cyan)      echo 00FFFF ;;
+        magenta)   echo FF00FF ;;
+        orange)    echo FF6000 ;;
+        purple)    echo 8000FF ;;
+        pink)      echo FF3080 ;;
+        warm)      echo FFB040 ;;
+        *)
+            if [[ "$c" =~ ^[0-9a-f]{6}$ ]]; then
+                echo "${c^^}"
+            else
+                return 1
+            fi ;;
+    esac
+}
+
+is_color() { resolve_color "$1" >/dev/null 2>&1; }
+
+# --- command runners --------------------------------------------------------
+
+apply() {
+    if [ "$RGB_DRY_RUN" = "1" ]; then
+        echo "${SUDO[*]:+${SUDO[*]} }$OPENRGB_BIN $*"
+    else
+        "${SUDO[@]}" "$OPENRGB_BIN" "$@"
+    fi
+}
+
+svc() {
+    if [ "$RGB_DRY_RUN" = "1" ]; then
+        echo "${SUDO[*]:+${SUDO[*]} }systemctl $*"
+    else
+        "${SUDO[@]}" systemctl "$@"
+    fi
+}
+
+# Warn when the boot service will undo an on/mode change at next reboot.
+warn_persist() {
+    [ "$RGB_DRY_RUN" = "1" ] && return 0
+    local state
+    state="$(systemctl is-enabled openrgb-off.service 2>/dev/null || true)"
+    if [ "$state" = "enabled" ]; then
+        echo "note: openrgb-off.service is enabled and will turn LEDs off at next boot." >&2
+        echo "      run 'rgb persist off' to keep this across reboots." >&2
+    fi
+}
+
+# --- commands ---------------------------------------------------------------
+
+cmd_list() {
+    local lines
+    lines="$(device_lines)"
+    if [ -z "$lines" ]; then
+        echo "No OpenRGB devices detected." >&2
+        echo "Is openrgb installed and are the i2c modules loaded? (see scripts/programs/openrgb.sh)" >&2
+        exit 1
+    fi
+    echo "Devices:"
+    printf '  %s\n' "$lines"
+}
+
+cmd_status() {
+    cmd_list || true
+    echo ""
+    local state
+    state="$(systemctl is-enabled openrgb-off.service 2>/dev/null || echo unknown)"
+    echo "Boot service openrgb-off.service: $state"
+    [ "$state" = "enabled" ] && echo "  LEDs are forced off at every boot. 'rgb persist off' to change."
+    return 0
+}
+
+cmd_colors() {
+    cat <<'EOF'
+Named colors (case-insensitive; or pass any 6-digit hex, with or without '#'):
+  off/black 000000    white   FFFFFF    red     FF0000    green   00FF00
+  blue      0000FF    yellow  FFFF00    cyan    00FFFF    magenta FF00FF
+  orange    FF6000    purple  8000FF    pink    FF3080    warm    FFB040
+EOF
+}
+
+cmd_off() {
+    resolve_target "${1:-all}" || exit 1
+    apply "${RESOLVED_DEV[@]}" --mode static --color 000000
+    echo "Off: ${1:-all}"
+}
+
+cmd_on() {
+    local target="all" color="white"
+    case $# in
+        0) ;;
+        1) if is_color "$1"; then color="$1"; else target="$1"; fi ;;
+        2) target="$1"; color="$2" ;;
+        *) echo "Usage: rgb on [target] [COLOR]" >&2; exit 1 ;;
+    esac
+
+    local hex
+    if ! hex="$(resolve_color "$color")"; then
+        echo "Unknown color: '$color' (see 'rgb colors')" >&2
+        exit 1
+    fi
+
+    resolve_target "$target" || exit 1
+    apply "${RESOLVED_DEV[@]}" --mode static --color "$hex"
+    warn_persist
+    echo "On: $target -> #$hex"
+}
+
+cmd_mode() {
+    if [ $# -lt 1 ]; then
+        echo "Usage: rgb mode <MODE> [target]" >&2
+        exit 1
+    fi
+    local mode="$1"; shift
+    resolve_target "${1:-all}" || exit 1
+    apply "${RESOLVED_DEV[@]}" --mode "$mode"
+    warn_persist
+    echo "Mode: ${1:-all} -> $mode"
+}
+
+cmd_persist() {
+    case "${1:-}" in
+        on)  svc enable  --now openrgb-off.service
+             echo "Persistence ON: LEDs forced off at every boot." ;;
+        off) svc disable --now openrgb-off.service
+             echo "Persistence OFF: your colors will survive reboot." ;;
+        *)   echo "Usage: rgb persist <on|off>" >&2; exit 1 ;;
+    esac
+}
+
+main() {
+    local cmd="${1:-help}"
+    shift || true
+    case "$cmd" in
+        help|-h|--help) usage ;;
+        list)           cmd_list ;;
+        status)         cmd_status ;;
+        colors)         cmd_colors ;;
+        off)            cmd_off "$@" ;;
+        on)             cmd_on "$@" ;;
+        mode)           cmd_mode "$@" ;;
+        persist)        cmd_persist "$@" ;;
+        *)              usage; exit 1 ;;
+    esac
+}
+
+main "$@"

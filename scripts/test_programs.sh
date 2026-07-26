@@ -463,6 +463,17 @@ else
     FAIL=$((FAIL + 1))
 fi
 
+# --- rgb CLI: dispatch to dedicated test file ---
+echo ""
+echo "=== rgb CLI ==="
+if bash "$DOTFILES_DIR/scripts/test_rgb_cli.sh"; then
+    echo "  PASS: rgb CLI suite"
+    PASS=$((PASS + 1))
+else
+    echo "  FAIL: rgb CLI suite"
+    FAIL=$((FAIL + 1))
+fi
+
 # --- Syntax checks ---
 echo ""
 echo "=== Syntax checks ==="
