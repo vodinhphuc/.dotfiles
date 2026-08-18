@@ -112,16 +112,73 @@ assert_exit_zero "tpm.sh exits 0 when install_plugins present" "$code"
 assert_file_exists "tpm.sh invokes install_plugins" "$SENTINEL"
 assert_output_contains "tpm.sh announces plugin install" "Installing tmux plugins" "$output"
 
-# --- neovim.sh: skip when nvim already in PATH ---
+# Reports every queried package as installed, so the apt-dep step is skipped.
+mock_dpkg_query_all_installed() {
+    printf '#!/bin/bash\necho "install ok installed"\nexit 0\n' > "$BIN_DIR/dpkg-query"
+    chmod +x "$BIN_DIR/dpkg-query"
+}
+
+# Logging mocks: record argv instead of executing, so nothing is really installed.
+mock_logging_cmds() {
+    local log="$1"; shift
+    local cmd
+    for cmd in "$@"; do
+        cat > "$BIN_DIR/$cmd" <<EOF
+#!/bin/bash
+echo "$cmd \$*" >> "$log"
+exit 0
+EOF
+        chmod +x "$BIN_DIR/$cmd"
+    done
+}
+
+# --- neovim.sh: skip every step when nvim, deps, and tree-sitter are present ---
 echo ""
 echo "=== neovim.sh: skip when already installed ==="
+NEOVIM_SKIP_LOG="$TEST_DIR/neovim_skip_calls.log"
+: > "$NEOVIM_SKIP_LOG"
+MOCK_HOME="$TEST_DIR/home_nvim_skip"
+mkdir -p "$MOCK_HOME"
 mock_cmd nvim
-output=$(PATH="$BIN_DIR:$PATH" bash "$DOTFILES_DIR/scripts/programs/neovim.sh" 2>&1)
+mock_cmd tree-sitter
+mock_dpkg_query_all_installed
+mock_logging_cmds "$NEOVIM_SKIP_LOG" sudo apt-get npm snap
+output=$(PATH="$BIN_DIR" HOME="$MOCK_HOME" /bin/bash "$DOTFILES_DIR/scripts/programs/neovim.sh" 2>&1)
 code=$?
+log_content="$(cat "$NEOVIM_SKIP_LOG" 2>/dev/null)"
 assert_exit_zero "neovim.sh exits 0 when already installed" "$code"
 assert_output_contains "neovim.sh prints 'Already installed: neovim'" "Already installed: neovim" "$output"
-# Cleanup so later tests don't see this nvim mock
-rm -f "$BIN_DIR/nvim"
+assert_output_contains "neovim.sh prints 'Already installed: tree-sitter CLI'" "Already installed: tree-sitter CLI" "$output"
+assert_output_not_contains "neovim.sh does not reinstall nvim when present" "snap install" "$log_content"
+assert_output_not_contains "neovim.sh does not reinstall tree-sitter when present" "npm install" "$log_content"
+rm -f "$BIN_DIR/nvim" "$BIN_DIR/tree-sitter" "$BIN_DIR/dpkg-query" \
+      "$BIN_DIR/sudo" "$BIN_DIR/apt-get" "$BIN_DIR/npm" "$BIN_DIR/snap"
+
+# --- neovim.sh: installs tree-sitter CLI even when nvim is already present ---
+# Regression guard. The script used to `exit 0` on `command -v nvim`, which made
+# every step below it unreachable on a machine that already had nvim. The
+# tree-sitter CLI was added after those machines were provisioned, so it never
+# installed, and nvim-treesitter failed to compile every parser on startup with
+# "ENOENT: no such file or directory (cmd): 'tree-sitter'".
+echo ""
+echo "=== neovim.sh: installs tree-sitter CLI when nvim present but CLI missing ==="
+NEOVIM_TS_LOG="$TEST_DIR/neovim_ts_calls.log"
+: > "$NEOVIM_TS_LOG"
+MOCK_HOME="$TEST_DIR/home_nvim_ts"
+mkdir -p "$MOCK_HOME"
+mock_cmd nvim
+mock_dpkg_query_all_installed
+mock_logging_cmds "$NEOVIM_TS_LOG" sudo apt-get npm snap
+output=$(PATH="$BIN_DIR" HOME="$MOCK_HOME" /bin/bash "$DOTFILES_DIR/scripts/programs/neovim.sh" 2>&1)
+code=$?
+log_content="$(cat "$NEOVIM_TS_LOG" 2>/dev/null)"
+assert_exit_zero "neovim.sh exits 0 when nvim present but tree-sitter missing" "$code"
+assert_output_contains "neovim.sh installs tree-sitter CLI despite nvim being present" "npm install -g --prefix" "$log_content"
+assert_output_contains "neovim.sh installs the tree-sitter-cli package" "tree-sitter-cli" "$log_content"
+assert_output_not_contains "neovim.sh does not reinstall nvim when present" "snap install" "$log_content"
+assert_output_not_contains "neovim.sh installs tree-sitter CLI without sudo" "sudo npm" "$log_content"
+rm -f "$BIN_DIR/nvim" "$BIN_DIR/dpkg-query" \
+      "$BIN_DIR/sudo" "$BIN_DIR/apt-get" "$BIN_DIR/npm" "$BIN_DIR/snap"
 
 # --- neovim.sh: installs neovim and deps when absent ---
 echo ""
@@ -150,14 +207,19 @@ echo "npm \$*" >> "$NEOVIM_LOG"
 exit 0
 EOF
 chmod +x "$BIN_DIR/npm"
-# Run with isolated PATH (no nvim, no go) + mocked sudo + mocked snap/apt/npm
-output=$(PATH="$BIN_DIR" /bin/bash "$DOTFILES_DIR/scripts/programs/neovim.sh" 2>&1) || true
+# Run with isolated PATH (no nvim, no go) + mocked sudo + mocked snap/apt/npm.
+# HOME is isolated too: the script prepends $HOME/.npm-global/bin to PATH, so a
+# real tree-sitter in the developer's home would otherwise mask the install step.
+MOCK_HOME="$TEST_DIR/home_nvim_absent"
+mkdir -p "$MOCK_HOME"
+output=$(PATH="$BIN_DIR" HOME="$MOCK_HOME" /bin/bash "$DOTFILES_DIR/scripts/programs/neovim.sh" 2>&1) || true
 log_content="$(cat "$NEOVIM_LOG" 2>/dev/null)"
 assert_output_contains "neovim.sh installs nvim via snap with classic confinement" "snap install nvim --classic" "$log_content"
 assert_output_contains "neovim.sh installs ripgrep (Telescope dep)" "ripgrep" "$log_content"
 assert_output_contains "neovim.sh installs fd-find (Telescope dep)" "fd-find" "$log_content"
 assert_output_contains "neovim.sh installs nodejs (for Mason-managed LSPs)" "nodejs" "$log_content"
-assert_output_contains "neovim.sh installs tree-sitter-cli via npm" "npm install -g tree-sitter-cli" "$log_content"
+assert_output_contains "neovim.sh installs tree-sitter-cli via npm" "npm install -g --prefix" "$log_content"
+assert_output_contains "neovim.sh installs the tree-sitter-cli package" "tree-sitter-cli" "$log_content"
 assert_output_contains "neovim.sh notes missing go toolchain" "Mason will skip gopls" "$output"
 # Cleanup: remove the logging mocks so they don't affect later tests
 rm -f "$BIN_DIR/apt-get" "$BIN_DIR/snap" "$BIN_DIR/npm" "$BIN_DIR/sudo"
@@ -179,7 +241,9 @@ done
 # The WSL branch needs real uname/mktemp/rm; symlink them into BIN_DIR so we can
 # keep PATH isolated (PATH=$BIN_DIR only) and hide any real nvim on the system.
 for bin in uname mktemp rm; do ln -sf "$(command -v "$bin")" "$BIN_DIR/$bin"; done
-output=$(PATH="$BIN_DIR" ENVIRONMENT=wsl /bin/bash "$DOTFILES_DIR/scripts/programs/neovim.sh" 2>&1) || true
+MOCK_HOME="$TEST_DIR/home_nvim_wsl"
+mkdir -p "$MOCK_HOME"
+output=$(PATH="$BIN_DIR" HOME="$MOCK_HOME" ENVIRONMENT=wsl /bin/bash "$DOTFILES_DIR/scripts/programs/neovim.sh" 2>&1) || true
 log_content="$(cat "$NEOVIM_WSL_LOG" 2>/dev/null)"
 assert_output_contains "WSL neovim.sh downloads the official release tarball" "neovim/releases/latest/download" "$log_content"
 assert_output_contains "WSL neovim.sh symlinks nvim onto PATH" "ln -sf /opt/nvim/bin/nvim" "$log_content"

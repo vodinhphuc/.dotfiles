@@ -8,7 +8,9 @@
 
 `.config/nvim/init.lua` is a vendored copy of [kickstart.nvim](https://github.com/nvim-lua/kickstart.nvim) — 1027 lines in one file, 20 plugins, with local customizations layered in (bash/python/go/ts LSPs, formatters, stylua).
 
-The config is not broken. Headless startup exits 0 with zero errors in ~30ms. The 20 plugins are not bloat either: subtract infrastructure (lazy.nvim, plenary, mason ×3, telescope extensions ×2) and ~10 user-facing features remain — LSP, completion, treesitter, fuzzy-find, git signs, formatting, which-key, colorscheme, mini.nvim, todo-comments. That is the minimal productive set.
+The 20 plugins are not bloat: subtract infrastructure (lazy.nvim, plenary, mason ×3, telescope extensions ×2) and ~10 user-facing features remain — LSP, completion, treesitter, fuzzy-find, git signs, formatting, which-key, colorscheme, mini.nvim, todo-comments. That is the minimal productive set.
+
+> **Correction (2026-08-18).** An earlier revision of this spec claimed "the config is not broken," citing `nvim --headless "+qa"` exiting 0 with no errors. That measurement was real but the wrong test: the headless invocation exits before nvim-treesitter's asynchronous parser build runs, so it could not observe the failure. The config *was* broken — see [Resolved: missing tree-sitter CLI](#resolved-missing-tree-sitter-cli) below. Fixed separately; the split described here proceeds unchanged.
 
 Four concrete pains, as stated by the user:
 
@@ -24,6 +26,30 @@ Root causes:
 - **1027 lines in one file.** The three customization anchors (LSP servers, treesitter parsers, formatters) are findable only via search comments at the top of the file.
 - **`init.lua:197` sets `virtual_text = true`.** Every diagnostic renders as text at the end of its line, competing with code. This is the source of both pain 3 and pain 4.
 - **No keybinding reference exists** in the repo.
+
+## Resolved: missing tree-sitter CLI
+
+Found and fixed while writing this spec. Separate from the split; recorded here because it falsified the "not broken" claim above.
+
+**Symptom.** On every startup, nvim-treesitter re-downloaded all 15 configured parsers and failed to compile each one:
+
+```
+[nvim-treesitter/install/luadoc] error: Error during "tree-sitter build":
+vim/_core/system:324: ENOENT: no such file or directory (cmd): 'tree-sitter'
+```
+
+**Root cause, two layers.**
+
+1. The `tree-sitter` CLI was absent. nvim-treesitter's `main` branch builds parsers from source and requires it; apt does not ship it.
+2. `scripts/programs/neovim.sh` opened with a script-wide guard — `command -v nvim && exit 0`. This machine installed nvim (v0.12.3) before commit `7bea06e` added the tree-sitter CLI step. Every subsequent run exited at that guard, so the new step was unreachable. `.install.log:2586` records `Already installed: neovim` with no tree-sitter line following it.
+
+Layer 2 is the real defect: the guard made *any* dependency added after a machine's first provisioning permanently unreachable.
+
+**Fix.** Replaced the script-wide guard with per-step guards — nvim binary, apt runtime deps (via `dpkg-query`), tree-sitter CLI — each printing `Already installed: <name>` when skipped, per the convention in `CLAUDE.md`. The CLI now installs unprivileged into `~/.npm-global` (already exported on PATH by `.zshrc:186`) instead of `sudo npm install -g`, which leaves root-owned files under `$HOME`.
+
+**Regression test.** `scripts/test_programs.sh` gained a case asserting that with `nvim` present and `tree-sitter` absent, the script still installs the CLI, does not reinstall nvim, and does not use sudo. Verified failing against the old script before the fix. The prior "skip when already installed" case was also made hermetic — it previously ran with the real `$PATH` and would have invoked real `sudo`/`apt-get` once the early exit was removed.
+
+**Verified.** 18 parsers compiled; `TSInstall` completes with zero errors; `neovim.sh` re-run is idempotent and needs no sudo.
 
 ## Non-goals
 
@@ -107,7 +133,7 @@ The split is pure code movement and must be provably behavior-neutral.
 
 Captured before and diffed after:
 
-1. `nvim --headless "+qa"` — exit 0, no stderr output.
+1. `nvim --headless "+qa"` — exit 0, no stderr output. **Not sufficient on its own:** this exits before asynchronous work (parser builds, LSP attach) runs, which is exactly how the tree-sitter failure above went unnoticed. Pair it with a run that holds the editor open long enough for async work to report — `nvim --headless "+sleep 20" "+qa"` on a real source file — and grep the output for `error`.
 2. `nvim --headless "+Lazy! sync" "+qa"` then the sorted plugin-name list from `lazy-lock.json` — identical set of 20 plugins.
 3. `nvim --headless --startuptime` — same order of magnitude (~30ms); a large regression means something is loading eagerly that previously did not.
 4. `vim.diagnostic.config()` dump — differs in exactly one key, `virtual_text`.
