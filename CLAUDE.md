@@ -42,7 +42,7 @@ Orchestrator. Runs once on a fresh machine (or resumes after failure):
 1. Parse flags (`--all`/`-a` to skip the menu, `--native`/`--wsl` to force the target, `--help`/`-h`)
 2. Disable the install-media (`cdrom`) apt source so `apt update` can't break
 3. Resolve the install **target**: `detect_environment` returns `wsl` (when `$WSL_DISTRO_NAME` is set or `/proc/version` mentions microsoft) or `native`. `--native`/`--wsl` override; otherwise `choose_environment` prompts interactively. Sets `ENVIRONMENT`.
-4. `build_plan` discovers the two phases (`system update`, `base packages`) plus one entry per `scripts/programs/*.sh`. Defaults respect the target: programs in `NATIVE_ONLY_PROGRAMS` (`docker fan_control ibus_unikey terminator visual_code`) start **deselected on WSL** (still visible/toggleable, tagged `(desktop/native)`)
+4. `build_plan` discovers the two phases (`system update`, `base packages`) plus one entry per `scripts/programs/*.sh`. Defaults respect the target: programs in `NATIVE_ONLY_PROGRAMS` (`docker fan_control ibus_unikey nerd_font openrgb terminator visual_code`) start **deselected on WSL** (still visible/toggleable, tagged `(desktop/native)`)
 5. Selection: `--all` accepts the target-aware defaults; an interactive TTY shows `select_menu` (↑/↓ or j/k to move, space to toggle, `a`/`n` all/none, `q` to abort, Enter to confirm); no TTY without `--all` errors out
 6. `apply_stow` (always) installs `stow` and applies symlinks
 7. `run_plan` runs the selected phases (`system_update`, `install_base`) and programs (via `run_step`); `apt upgrade`/`autoremove` run only if `system update` was selected. `install_base` also skips `chrome-gnome-shell`/`nvtop` on WSL.
@@ -67,7 +67,8 @@ Current scripts:
 | `glow.sh` | glow (Charm apt repo) + bat (markdown / syntax-highlighted reading) |
 | `ibus_unikey.sh` | ibus, ibus-unikey, configures GNOME input sources |
 | `miniconda.sh` | Miniconda3 to `~/miniconda3` |
-| `neovim.sh` | Neovim (snap on native, official release tarball on WSL) + IDE deps + tree-sitter CLI |
+| `neovim.sh` | Neovim (snap on native, official release tarball on WSL) + IDE deps + tree-sitter CLI (unprivileged, to `~/.npm-global`) |
+| `nerd_font.sh` | JetBrainsMono Nerd Font to `~/.local/share/fonts` (no sudo). Override with `NERD_FONT_NAME`/`NERD_FONT_MATCH`. Terminal font + `have_nerd_font = true` stay manual |
 | `openrgb.sh` | OpenRGB + i2c-tools; turns all RGB LEDs off now and via a boot-time systemd service (native-only). Per-device control: `.local/bin/rgb` / `docs/guides/rgb.md` |
 
 | `openrgb.sh` | OpenRGB + i2c-tools; turns all RGB LEDs off now and via a boot-time systemd service (native-only) |
@@ -105,6 +106,7 @@ Read/write wrapper over the raw hwmon `pwm` sysfs files (stowed onto `PATH`), co
 
 - **Every shell script MUST pass `shellcheck -x` with zero findings** (default severity — errors, warnings, info, and style). This is enforced by `scripts/test_programs.sh`, which fails the build on any finding. Run `shellcheck -x scripts/**/*.sh` before committing; fix issues rather than suppressing them. If a warning is a genuine false positive, silence it with a **targeted, commented** `# shellcheck disable=SCXXXX` on the specific line (never a blanket file-level or repo-level disable). Install it via `bash scripts/programs/shellcheck.sh`.
 - All scripts: `#!/bin/bash` + `set -euo pipefail`
+- Program scripts guard **each step**, never the whole script. A top-level `command -v X && exit 0` makes every step below it unreachable on an already-provisioned machine, so dependencies added later never install. This is not hypothetical: it silently blocked the tree-sitter CLI for months and left nvim-treesitter unable to compile any parser. Use `if ... else ... fi` per step, each printing `Already installed: <name>`
 - Scripts are guarded with `[[ "${BASH_SOURCE[0]}" == "${0}" ]]` only when they define reusable functions that tests source directly
 - Tests mock `sudo`, `apt-get`, and external commands by prepending a `$BIN_DIR` to `PATH`; they never require network or root
 - `.install_state`, `.install_errors`, and `.install.log` are gitignored runtime files
