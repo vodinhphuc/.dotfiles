@@ -269,7 +269,19 @@ NERD_SKIP_LOG="$TEST_DIR/nerd_skip_calls.log"
 : > "$NERD_SKIP_LOG"
 MOCK_HOME="$TEST_DIR/home_nerd_skip"
 mkdir -p "$MOCK_HOME"
-printf '#!/bin/bash\necho "JetBrainsMono Nerd Font Mono:style=Regular"\n' > "$BIN_DIR/fc-list"
+# The mock must emit MANY lines after the match. A `grep -q` guard exits on the
+# first hit and SIGPIPEs the producer; under `set -o pipefail` that fails the
+# whole pipeline and the guard misfires, reinstalling on every run. A one-line
+# mock cannot reproduce it -- the real fc-list emits ~630 lines.
+cat > "$BIN_DIR/fc-list" <<'FCEOF'
+#!/bin/bash
+echo "/home/u/.local/share/fonts/JetBrainsMonoNerdFont-Regular.ttf: JetBrainsMono Nerd Font Mono:style=Regular"
+i=0
+while [ $i -lt 20000 ]; do
+    echo "/usr/share/fonts/filler-$i.ttf: Filler Face $i:style=Regular"
+    i=$((i + 1))
+done
+FCEOF
 chmod +x "$BIN_DIR/fc-list"
 mock_logging_cmds "$NERD_SKIP_LOG" curl unzip fc-cache
 for bin in grep mkdir mktemp rm find cp cat; do ln -sf "$(command -v "$bin")" "$BIN_DIR/$bin"; done

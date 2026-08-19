@@ -16,7 +16,11 @@ FONT_NAME="${NERD_FONT_NAME:-JetBrainsMono}"
 FONT_MATCH="${NERD_FONT_MATCH:-JetBrainsMono Nerd Font}"
 FONT_DIR="$HOME/.local/share/fonts"
 
-if fc-list 2>/dev/null | grep -qi "$FONT_MATCH"; then
+# NOTE: `grep -i ... >/dev/null`, deliberately not `grep -qi`. With `-q` grep
+# exits on the first match and SIGPIPEs fc-list, which emits ~630 lines; under
+# `set -o pipefail` that failed the whole pipeline, so this guard never matched
+# and the font was re-downloaded on every run.
+if fc-list 2>/dev/null | grep -i "$FONT_MATCH" >/dev/null; then
     echo "Already installed: $FONT_MATCH"
 else
     echo "Installing $FONT_NAME Nerd Font into $FONT_DIR..."
@@ -27,8 +31,10 @@ else
 
     curl -fsSL "https://github.com/ryanoasis/nerd-fonts/releases/latest/download/${FONT_NAME}.zip" \
         -o "$tmp/font.zip"
-    # Nerd Font archives ship docs alongside the faces; keep only the faces.
-    unzip -q -o "$tmp/font.zip" -x 'README*' 'LICENSE*' -d "$tmp/extracted"
+    # Nerd Font archives ship docs alongside the faces. No -x filter: the archive
+    # contents vary by font and unzip warns "excluded filename not matched" for
+    # any pattern that misses. The find below keeps only the faces anyway.
+    unzip -q -o "$tmp/font.zip" -d "$tmp/extracted"
     find "$tmp/extracted" -type f \( -name '*.ttf' -o -name '*.otf' \) \
         -exec cp -f {} "$FONT_DIR/" \;
 
