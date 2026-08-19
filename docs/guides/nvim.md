@@ -84,7 +84,8 @@ Top-level groups:
 <Space>c...     CODE actions
 <Space>d...     DOCUMENT (symbols)
 <Space>w...     WORKSPACE (symbols)
-<Space>t...     TOGGLE
+<Space>t...     TOGGLE (<Space>tw = line wrap)
+<Space>m...     MARKDOWN (render / glow preview)
 <Space>h...     git Hunks
 <Space>q        quit / loclist
 <Space>f        format buffer
@@ -235,6 +236,61 @@ Don't go straight to tabs — most users use buffers + splits and rarely need ta
 - Formatter: `stylua`
 - Open `~/.config/nvim/init.lua` and you'll see hover docs for every `vim.*` call.
 
+### Markdown (reading docs without leaving nvim)
+
+Two complementary plugins, both lazy-loaded on `markdown` filetype:
+
+```
+<Space>mt       toggle in-buffer rendering (render-markdown.nvim)
+<Space>mp       open the file in glow, in a floating window (glow.nvim)
+:RenderMarkdown toggle | enable | disable
+:Glow
+```
+
+- **`render-markdown.nvim` styles the buffer you're editing** — headings get
+  backgrounds, `-` becomes `•`, `- [ ]` becomes `☐`, tables align, code blocks get
+  a shaded background. It un-renders whichever line your cursor is on, so the raw
+  markdown is always there when you need to type. This is on by default in any
+  markdown file; `<Space>mt` turns it off if you want to see raw source.
+- **`:Glow` / `<Space>mp` is the terminal `glow` you already use**, opened in a
+  floating window over the buffer. Read-only pager — `q` closes it. Use this when
+  you want the full paged, centered, glow-styled read rather than an edited buffer.
+
+Both rely on the `markdown` and `markdown_inline` treesitter parsers (installed
+automatically) and on a Nerd Font for the icons. `glow` itself comes from
+`scripts/programs/glow.sh`. Verify with `:checkhealth render-markdown`.
+
+**Three gotchas worth knowing up front:**
+
+1. **`<Space>mt` is global and sticks for the session.** `:RenderMarkdown toggle`
+   flips one flag for all buffers, not just the current one, and it stays flipped
+   until you flip it back or restart nvim. So if a markdown file suddenly shows
+   raw `#`, `**bold**` and `- [ ]` markup, you almost certainly brushed
+   `<Space>mt` — `:RenderMarkdown enable` restores it.
+2. **glow keeps the `##` on H2 and below.** Only H1 gets its `#` swallowed into a
+   coloured block. That is glow's own dark theme, identical in your terminal — it
+   is not a half-broken render.
+3. **The float is coloured on purpose.** glow.nvim pipes glow's stdout instead of
+   giving it a PTY, so glow decides it is "not a terminal" and drops every colour,
+   leaving correct layout in flat grey. `init.lua` sets `CLICOLOR_FORCE=1` around
+   the spawn (and only around the spawn — exporting it session-wide would force
+   ANSI colour into ripgrep, git and the LSP servers, whose output nvim parses as
+   plain text).
+
+**Wide tables.** Several tables in this repo are 175-270 columns wide. With `wrap`
+on, one row spills over three screen lines, and because render-markdown pads every
+cell out to the widest column, the overflow is mostly blanks with the closing `|`
+stranded on its own line. Two ways out:
+
+```
+<Space>tw       toggle 'wrap' -- off puts each row back on one line, scroll sideways
+<Space>mp       read it in glow instead, which reflows cell contents to fit
+```
+
+`<Space>tw` is the better fix while editing (alignment is preserved); `:Glow` is
+the better fix while reading, because render-markdown only pads and aligns -- it
+never re-wraps text inside a cell, and has no `max_width` to cap a runaway table.
+
 ---
 
 ## 10. Common workflows (what you'll actually do)
@@ -287,6 +343,9 @@ Don't go straight to tabs — most users use buffers + splits and rarely need ta
 | `<Space>f` does nothing on a file | `:ConformInfo` — does it know a formatter for this filetype? Is the formatter installed in `:Mason`? |
 | `<Space>sf` says "ripgrep not found" or "fd not found" | `which rg fdfind` — should both resolve. If not, the `neovim.sh` install didn't run. |
 | Plugins look broken after a manual `:Lazy update` | `:Lazy clean` then `:Lazy sync`. Worst case `rm -rf ~/.local/share/nvim ~/.local/state/nvim` and relaunch — your config (`init.lua`) is unaffected. |
+| A markdown file shows raw `#` / `**bold**` / `- [ ]` instead of rendering | You hit `<Space>mt`. It toggles render-markdown **globally** for the rest of the session — `:RenderMarkdown enable` (or `<Space>mt` again) restores it. Restarting nvim also resets it. |
+| Table rows sprawl over several lines with a stray `\|` alone on one | The table is wider than the window and `wrap` is on. `<Space>tw` turns wrap off (one row per line, scroll sideways); `<Space>mp` reads it in glow, which reflows cell contents. |
+| `:Glow` opens but looks flat and grey | glow only colours output it thinks is a terminal. `init.lua` sets `CLICOLOR_FORCE=1` around the spawn — if you changed that spec, put it back. |
 | You're trapped in some weird state | `Esc Esc Esc`, then `:q!` |
 
 ---

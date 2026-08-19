@@ -70,6 +70,10 @@ Current scripts:
 | `uv.sh` | uv + uvx (Python pkg/project manager), pre-generates zsh completions to `~/.config/uv` |
 | `visual_code.sh` | VS Code (Microsoft apt repo — unconfined so ibus input methods work) |
 
+### `.config/nvim/init.lua`
+
+Single-file kickstart.nvim config (the `lua/config/` + `lua/plugins/` split is specced but deliberately deferred — do not start it unprompted). Markdown reading is handled by two plugins added under the `<leader>m` which-key group: `render-markdown.nvim` (in-buffer styling, `<leader>mt` toggles it **globally** for the session) and `glow.nvim` (`<leader>mp` / `:Glow`, a floating glow pager). The glow spec overrides the plugin's own `Glow` command to set `CLICOLOR_FORCE=1` **around the spawn only** — glow.nvim pipes stdout rather than allocating a PTY, so glow otherwise emits no colour; exporting the var session-wide would force ANSI colour into ripgrep, git and the LSP servers. `<leader>tw` toggles `wrap`, because several tables in this repo exceed 200 columns and wrap into unreadable fragments. User-facing reference: `docs/guides/nvim.md`.
+
 ## How to extend
 
 **Add a program:** Create `scripts/programs/<name>.sh` with an idempotency guard. It is picked up automatically by `install.sh`. Add a matching test case to `scripts/test_programs.sh`.
