@@ -61,7 +61,7 @@ exit 0
 EOF
 chmod +x "$FAKE"
 
-run_rgb() { OPENRGB_BIN="$FAKE" RGB_DRY_RUN=1 RGB_SUDO= "$RGB" "$@" 2>&1; }
+run_rgb() { OPENRGB_BIN="$FAKE" RGB_DRY_RUN=1 RGB_SUDO='' "$RGB" "$@" 2>&1; }
 
 # --- help ---
 echo ""
