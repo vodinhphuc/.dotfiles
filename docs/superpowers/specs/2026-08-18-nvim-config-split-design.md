@@ -119,13 +119,17 @@ No diagnostic information is lost; only its unsolicited rendering is removed. Th
 
 ### 3. Keybinding reference
 
-`docs/guides/nvim.md`, following the structure of the existing `docs/guides/rgb.md`:
+> **Correction (2026-08-19).** This section originally specified writing `docs/guides/nvim.md` from scratch. That file already existed — committed `d33a227` on 2026-04-29, four months before this spec — and neither the design review nor I caught it. Executing the section as written would have duplicated or clobbered a working guide. Scope is reduced to amendments.
 
-- A "start here" table of ~10 keys covering the daily loop: find file, grep, save, go-to-definition, rename, format, diagnostics.
-- Remaining keymaps grouped by task (search, LSP, git, windows, diagnostics), each with its source file so the doc points back at editable config.
-- A short note on discovery: `which-key` (press `<space>` and pause), `:Tutor`, `:checkhealth`.
+`docs/guides/nvim.md` already covers modes, leader keymaps, LSP, formatting, git, and per-language tips across 13 sections. What it lacks, and what this work should add:
 
-Linked from the `README.md` guides table and referenced in the `CLAUDE.md` Neovim section. This addresses pain 1.
+- **A "start here" table** of ~10 keys for the daily loop. Section 3 ("Survival keys") is vim fundamentals; there is no equivalent for *this config's* daily loop.
+- **File pointers per keymap group.** Once the split lands, each group should name the file that defines it (`lua/config/keymaps.lua`, `lua/plugins/telescope.lua`, …) so the doc leads back to editable config.
+- **Two documented gaps found 2026-08-18.** `gd` is unbound (go-to-definition is `<C-]>` via `tagfunc`), and formatting has no keybinding — conform runs on save only. Both are worth fixing during the split; whatever is decided, the guide must match.
+
+Already done (2026-08-19): a cross-link from section 12 to `docs/troubleshooting/terminal-icons-tofu.md`.
+
+The guide is already linked from the `README.md` guides table. This addresses pain 1.
 
 ## Verification
 
