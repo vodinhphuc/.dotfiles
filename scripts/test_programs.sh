@@ -57,6 +57,36 @@ assert_file_exists() {
     fi
 }
 
+assert_equals() {
+    local desc="$1" expected="$2" actual="$3"
+    if [ "$expected" = "$actual" ]; then
+        echo "  PASS: $desc"
+        PASS=$((PASS + 1))
+    else
+        echo "  FAIL: $desc"
+        echo "        expected: '$expected'"
+        echo "        actual:   '$actual'"
+        FAIL=$((FAIL + 1))
+    fi
+}
+
+# `--` before the needle lets callers grep for something starting with a dash.
+assert_file_contains() {
+    local desc="$1" file="$2"
+    shift 2
+    [ "${1:-}" = "--" ] && shift
+    local needle="$1"
+    if [ -f "$file" ] && grep -qF -- "$needle" "$file"; then
+        echo "  PASS: $desc"
+        PASS=$((PASS + 1))
+    else
+        echo "  FAIL: $desc"
+        echo "        file:   $file"
+        echo "        needle: '$needle'"
+        FAIL=$((FAIL + 1))
+    fi
+}
+
 assert_dir_exists() {
     local desc="$1" dir="$2"
     if [ -d "$dir" ]; then
@@ -631,6 +661,55 @@ for script in "$DOTFILES_DIR"/scripts/programs/*.sh; do
     fi
 done
 
+# --- ttyd.sh: skip when already installed ---
+echo ""
+echo "=== ttyd.sh: skip when already installed ==="
+mock_sudo
+MOCK_HOME="$TEST_DIR/home_ttyd_skip"
+mkdir -p "$MOCK_HOME/systemd_user" "$MOCK_HOME/config_ttyd"
+touch "$MOCK_HOME/systemd_user/ttyd.service"
+touch "$MOCK_HOME/config_ttyd/credentials"
+output=$(PATH="$BIN_DIR:$PATH" \
+    TTYD_SYSTEMD_USER_DIR="$MOCK_HOME/systemd_user" \
+    TTYD_CONFIG_DIR="$MOCK_HOME/config_ttyd" \
+    TTYD_FORCE_PKG_INSTALLED=1 \
+    TTYD_SKIP_SYSTEMCTL=1 \
+    bash "$DOTFILES_DIR/scripts/programs/ttyd.sh" 2>&1)
+code=$?
+assert_exit_zero "ttyd.sh exits 0 when already installed" "$code"
+assert_output_contains "ttyd.sh prints 'Already installed: ttyd'" "Already installed: ttyd" "$output"
+rm -f "$BIN_DIR/sudo"
+
+# --- ttyd.sh: generates credentials and writes a user service ---
+echo ""
+echo "=== ttyd.sh: generates credentials and installs service ==="
+mock_sudo
+MOCK_HOME="$TEST_DIR/home_ttyd_install"
+mkdir -p "$MOCK_HOME"
+output=$(PATH="$BIN_DIR:$PATH" \
+    TTYD_SYSTEMD_USER_DIR="$MOCK_HOME/systemd_user" \
+    TTYD_CONFIG_DIR="$MOCK_HOME/config_ttyd" \
+    TTYD_FORCE_PKG_INSTALLED=1 \
+    TTYD_SKIP_SYSTEMCTL=1 \
+    bash "$DOTFILES_DIR/scripts/programs/ttyd.sh" 2>&1)
+code=$?
+assert_exit_zero "ttyd.sh exits 0 on first configure" "$code"
+assert_file_exists "ttyd.sh writes the user service" "$MOCK_HOME/systemd_user/ttyd.service"
+assert_file_exists "ttyd.sh writes a credentials file" "$MOCK_HOME/config_ttyd/credentials"
+
+# A world-readable password would defeat the point of generating one.
+cred_mode=$(stat -c '%a' "$MOCK_HOME/config_ttyd/credentials" 2>/dev/null)
+assert_equals "ttyd.sh chmods credentials to 600" "600" "$cred_mode"
+
+# -W is what makes the terminal writable; without it ttyd 1.7+ is read-only and
+# the browser silently cannot type, which is the whole point of installing it.
+assert_file_contains "ttyd service passes -W (writable)" "$MOCK_HOME/systemd_user/ttyd.service" -- "-W"
+# Binding to 0.0.0.0 would expose a full shell to the LAN.
+assert_file_contains "ttyd service binds an interface, not all addresses" "$MOCK_HOME/systemd_user/ttyd.service" "-i tailscale0"
+assert_output_not_contains "ttyd.sh never binds 0.0.0.0" "0.0.0.0" "$output"
+assert_file_contains "ttyd service attaches the tmux session" "$MOCK_HOME/systemd_user/ttyd.service" "tmux new -A -s dotfile"
+rm -f "$BIN_DIR/sudo"
+
 # --- ShellCheck lint (enforced: every repo script must pass `shellcheck -x`) ---
 echo ""
 echo "=== ShellCheck lint ==="
@@ -646,7 +725,12 @@ lint_targets() {
     for f in "$DOTFILES_DIR"/.local/bin/*; do
         [ -f "$f" ] || continue
         [ -L "$f" ] && continue
-        shebang="$(head -c 128 "$f" 2>/dev/null | head -1)"
+        # Gate on the two magic bytes first, without a command substitution:
+        # capturing bytes from the multi-megabyte binaries that also live here
+        # makes bash warn about ignored null bytes on every run. Anything that
+        # clears this gate is a text script, so reading its first line is safe.
+        head -c 2 "$f" 2>/dev/null | grep -q '^#!' || continue
+        IFS= read -r shebang < "$f" || shebang=""
         if [[ "$shebang" =~ ^#!.*[/[:space:]](ba)?sh([[:space:]]|$) ]]; then
             printf '%s\n' "$f"
         fi
