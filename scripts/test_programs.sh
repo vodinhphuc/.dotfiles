@@ -424,8 +424,27 @@ done
 # --- ShellCheck lint (enforced: every repo script must pass `shellcheck -x`) ---
 echo ""
 echo "=== ShellCheck lint ==="
+# scripts/ is uniformly *.sh, but .local/bin holds extensionless stowed CLIs
+# (fan, rgb) sitting next to runtime-installed binaries (uv, uvx) and symlinks,
+# which shellcheck cannot read. Select those by shebang instead of globbing
+# blindly, and read only the first line -- uv is ~60MB.
+lint_targets() {
+    local f shebang
+    for f in "$DOTFILES_DIR"/scripts/*.sh "$DOTFILES_DIR"/scripts/programs/*.sh; do
+        [ -f "$f" ] && printf '%s\n' "$f"
+    done
+    for f in "$DOTFILES_DIR"/.local/bin/*; do
+        [ -f "$f" ] || continue
+        [ -L "$f" ] && continue
+        shebang="$(head -c 128 "$f" 2>/dev/null | head -1)"
+        if [[ "$shebang" =~ ^#!.*[/[:space:]](ba)?sh([[:space:]]|$) ]]; then
+            printf '%s\n' "$f"
+        fi
+    done
+}
+
 if command -v shellcheck >/dev/null 2>&1; then
-    for script in "$DOTFILES_DIR"/scripts/*.sh "$DOTFILES_DIR"/scripts/programs/*.sh; do
+    while IFS= read -r script; do
         name="${script#"$DOTFILES_DIR"/}"
         if shellcheck -x "$script" >/dev/null 2>&1; then
             echo "  PASS: $name shellcheck clean"
@@ -435,7 +454,7 @@ if command -v shellcheck >/dev/null 2>&1; then
             shellcheck -x "$script" 2>&1 | sed 's/^/        /'
             FAIL=$((FAIL + 1))
         fi
-    done
+    done < <(lint_targets)
 else
     echo "  SKIP: shellcheck not installed — run 'bash scripts/programs/shellcheck.sh' to enable this check"
 fi
