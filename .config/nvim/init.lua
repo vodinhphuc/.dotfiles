@@ -220,26 +220,6 @@ vim.keymap.set('n', '<leader>tw', function()
   vim.wo.wrap = not vim.wo.wrap
   vim.notify('wrap ' .. (vim.wo.wrap and 'on' or 'off'), vim.log.levels.INFO)
 end, { desc = '[T]oggle line [W]rap' })
-
--- Type Vietnamese without help from the client keyboard. Over SSH from a phone
--- or tablet, Android terminal apps declare their input as "raw, no suggestions",
--- and keyboards respond by switching off the composing region -- which is
--- exactly what Telex needs, so `tieengs` arrives literally instead of `tiếng`.
--- Nvim's built-in keymap does the composing itself, on this side of the wire,
--- so it works no matter what the remote keyboard does.
---
--- Buffer-local on purpose: you want this in prose, not while editing code.
--- Once it is on, `<C-^>` in insert mode flips it off and back without leaving
--- insert (that is vim's own 'iminsert' toggle, not something defined here).
---
--- Caveat worth knowing: this is a lookup table, not a real Telex engine, so the
--- tone goes immediately after its vowel rather than at the end of the syllable
--- --- `tieesng` gives `tiếng`, whereas `tieengs` gives `tiêngs`.
-vim.keymap.set('n', '<leader>tv', function()
-  vim.bo.keymap = vim.bo.keymap == 'vietnamese-telex' and '' or 'vietnamese-telex'
-  vim.notify('vietnamese telex ' .. (vim.bo.keymap == '' and 'off' or 'on'), vim.log.levels.INFO)
-end, { desc = '[T]oggle [V]ietnamese telex' })
-
 -- Exit terminal mode in the builtin terminal with a shortcut that is a bit easier
 -- for people to discover. Otherwise, you normally need to press <C-\><C-n>, which
 -- is not what someone will guess without a bit more experience.
