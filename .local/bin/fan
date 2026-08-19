@@ -8,6 +8,17 @@ FAN_DRY_RUN="${FAN_DRY_RUN:-0}"
 # (nvme, coretemp, iwlwifi, …) only expose temps and are filtered out.
 fan_chip_pattern='^(nct6|it87|f71)'
 
+# Writing pwm under /sys needs root, but the unit tests point HWMON_ROOT at a
+# writable temp tree. FAN_SUDO defaults to "sudo"; set it empty (FAN_SUDO=) to
+# drop the prefix. Mirrors the RGB_SUDO hook in .local/bin/rgb.
+if [ -z "${FAN_SUDO+x}" ]; then
+    SUDO=(sudo)
+elif [ -n "$FAN_SUDO" ]; then
+    SUDO=("$FAN_SUDO")
+else
+    SUDO=()
+fi
+
 usage() {
     cat <<'EOF'
 Usage: fan <command> [args]
@@ -24,9 +35,221 @@ Commands:
 Environment:
   HWMON_ROOT             Override sysfs root (default: /sys/class/hwmon)
   FAN_DRY_RUN=1          Print systemctl commands instead of running them
+  FAN_SUDO=              Drop the sudo prefix
 
 See docs/guides/fans.md for setup, fan curves, and safety notes.
 EOF
+}
+
+no_chips_error() {
+    echo "No controllable fan chips found under $HWMON_ROOT." >&2
+    echo "Run 'sudo sensors-detect' and load the superio module (nct6775)." >&2
+    echo "See docs/guides/fans.md for setup, fan curves, and safety notes." >&2
+}
+
+# Read a sysfs attribute, or print the fallback when it is missing/unreadable.
+read_attr() {
+    local path="$1" fallback="${2:-}"
+    if [ -r "$path" ]; then
+        cat "$path"
+    else
+        printf '%s' "$fallback"
+    fi
+}
+
+# hwmon's pwm_enable convention: 0 = no control (full speed), 1 = manual,
+# 2 = automatic (the chip's own curve, what fancontrol drives).
+pwm_mode_label() {
+    case "$1" in
+        0) echo "full-speed" ;;
+        1) echo "manual" ;;
+        2) echo "auto" ;;
+        *) echo "mode$1" ;;
+    esac
+}
+
+# Emit one TAB-separated record per controllable channel:
+#   pwmN <TAB> hwmon-dir <TAB> label <TAB> chip-name
+# The pwm[0-9]+ anchor matters: a bare pwm* glob also matches pwm1_enable,
+# pwm1_mode and friends, which are attributes rather than channels.
+fan_channels() {
+    local dir name pwm base idx label
+    for dir in "$HWMON_ROOT"/hwmon*; do
+        [ -d "$dir" ] || continue
+        [ -r "$dir/name" ] || continue
+        name="$(cat "$dir/name")"
+        [[ "$name" =~ $fan_chip_pattern ]] || continue
+        for pwm in "$dir"/pwm*; do
+            [ -f "$pwm" ] || continue
+            base="$(basename "$pwm")"
+            [[ "$base" =~ ^pwm[0-9]+$ ]] || continue
+            idx="${base#pwm}"
+            label="$(read_attr "$dir/fan${idx}_label" "fan${idx}")"
+            printf '%s\t%s\t%s\t%s\n' "$base" "$dir" "$label" "$name"
+        done
+    done
+}
+
+write_sysfs() {
+    local path="$1" value="$2"
+    if [ -w "$path" ]; then
+        printf '%s\n' "$value" > "$path"
+    elif [ "${#SUDO[@]}" -gt 0 ]; then
+        printf '%s\n' "$value" | "${SUDO[@]}" tee "$path" >/dev/null
+    else
+        echo "Cannot write $path (not writable and no sudo configured)" >&2
+        return 1
+    fi
+}
+
+run_systemctl() {
+    if [ "$FAN_DRY_RUN" = "1" ]; then
+        echo "${SUDO[*]:+${SUDO[*]} }systemctl $*"
+    else
+        "${SUDO[@]}" systemctl "$@"
+    fi
+}
+
+cmd_list() {
+    local found=0 ch dir label chip
+    while IFS=$'\t' read -r ch dir label chip; do
+        found=1
+        printf '  %-6s %-12s %-10s %s\n' "$ch" "$label" "$chip" "$dir/$ch"
+    done < <(fan_channels)
+
+    if [ "$found" -eq 0 ]; then
+        no_chips_error
+        return 1
+    fi
+}
+
+cmd_status() {
+    local any=0 dir name f base idx label rpm milli celsius pwm raw pct enable mode
+
+    for dir in "$HWMON_ROOT"/hwmon*; do
+        [ -d "$dir" ] || continue
+        [ -r "$dir/name" ] || continue
+        name="$(cat "$dir/name")"
+        [[ "$name" =~ $fan_chip_pattern ]] || continue
+        any=1
+
+        echo "Chip: $name  ($dir)"
+
+        for f in "$dir"/fan*_input; do
+            [ -f "$f" ] || continue
+            base="$(basename "$f")"; idx="${base%_input}"
+            label="$(read_attr "$dir/${idx}_label")"
+            rpm="$(cat "$f")"
+            printf '  %-6s %-12s %6s RPM\n' "$idx" "$label" "$rpm"
+        done
+
+        for f in "$dir"/temp*_input; do
+            [ -f "$f" ] || continue
+            base="$(basename "$f")"; idx="${base%_input}"
+            label="$(read_attr "$dir/${idx}_label")"
+            milli="$(cat "$f")"
+            celsius=$((milli / 1000))
+            printf '  %-6s %-12s %6s C\n' "$idx" "$label" "$celsius"
+        done
+
+        for pwm in "$dir"/pwm*; do
+            [ -f "$pwm" ] || continue
+            base="$(basename "$pwm")"
+            [[ "$base" =~ ^pwm[0-9]+$ ]] || continue
+            raw="$(cat "$pwm")"
+            pct=$((raw * 100 / 255))
+            enable="$(read_attr "${pwm}_enable" 2)"
+            mode="$(pwm_mode_label "$enable")"
+            printf '  %-6s %-12s %5s%% (%s/255)  mode: %s\n' "$base" "" "$pct" "$raw" "$mode"
+        done
+
+        echo ""
+    done
+
+    if [ "$any" -eq 0 ]; then
+        no_chips_error
+        return 1
+    fi
+
+    if [ "$FAN_DRY_RUN" = "1" ]; then
+        echo "fancontrol service: (dry run, not queried)"
+    else
+        echo "fancontrol service: $(systemctl is-active fancontrol 2>/dev/null || echo unknown)"
+    fi
+}
+
+cmd_set() {
+    local channel="" percent="" force=0 arg
+    for arg in "$@"; do
+        case "$arg" in
+            --force)
+                force=1
+                ;;
+            *)
+                # Positional, in order: channel then percent. Note that a
+                # negative percent like -1 must land here rather than be eaten
+                # as a flag, so the numeric check below can reject it.
+                if [ -z "$channel" ]; then
+                    channel="$arg"
+                elif [ -z "$percent" ]; then
+                    percent="$arg"
+                else
+                    echo "Unexpected argument: '$arg'" >&2
+                    return 1
+                fi
+                ;;
+        esac
+    done
+
+    if [ -z "$channel" ] || [ -z "$percent" ]; then
+        echo "Usage: fan set <pwmN> <0-100> [--force]" >&2
+        return 1
+    fi
+
+    if ! [[ "$percent" =~ ^[0-9]+$ ]] || [ "$percent" -gt 100 ]; then
+        echo "Invalid percentage: '$percent' (expected an integer 0-100)" >&2
+        return 1
+    fi
+
+    if [ "$percent" -eq 0 ] && [ "$force" -ne 1 ]; then
+        echo "Refusing to set $channel to 0% -- that stops the fan entirely." >&2
+        echo "Re-run with --force if you really mean it." >&2
+        return 1
+    fi
+
+    local ch dir label chip path=""
+    while IFS=$'\t' read -r ch dir label chip; do
+        if [ "$ch" = "$channel" ]; then
+            path="$dir/$ch"
+        fi
+    done < <(fan_channels)
+
+    if [ -z "$path" ]; then
+        local available
+        available="$(fan_channels | cut -f1 | paste -sd' ' -)"
+        echo "Unknown channel: '$channel'. Available: ${available:-none}" >&2
+        return 1
+    fi
+
+    # 0-100 percent maps onto the hwmon 0-255 duty-cycle range.
+    local raw=$((percent * 255 / 100))
+
+    # Order matters: switch to manual first, otherwise the chip's automatic
+    # curve can overwrite the duty cycle before the mode change takes effect.
+    write_sysfs "${path}_enable" 1
+    write_sysfs "$path" "$raw"
+
+    echo "Set $channel to ${percent}% (${raw}/255), mode: manual"
+}
+
+cmd_manual() {
+    run_systemctl stop fancontrol
+    echo "fancontrol stopped -- manual pwm values stick until 'fan auto'."
+}
+
+cmd_auto() {
+    run_systemctl start fancontrol
+    echo "fancontrol started -- the configured curve is back in control."
 }
 
 main() {
@@ -42,13 +265,5 @@ main() {
         *)              usage; exit 1 ;;
     esac
 }
-
-# Stubs filled in by later tasks. Each prints "not implemented" and exits 1
-# so the suite shows clear failures until each subcommand lands.
-cmd_list()    { echo "not implemented: list"   >&2; exit 1; }
-cmd_status()  { echo "not implemented: status" >&2; exit 1; }
-cmd_set()     { echo "not implemented: set"    >&2; exit 1; }
-cmd_manual()  { echo "not implemented: manual" >&2; exit 1; }
-cmd_auto()    { echo "not implemented: auto"   >&2; exit 1; }
 
 main "$@"
