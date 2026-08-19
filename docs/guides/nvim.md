@@ -84,7 +84,7 @@ Top-level groups:
 <Space>c...     CODE actions
 <Space>d...     DOCUMENT (symbols)
 <Space>w...     WORKSPACE (symbols)
-<Space>t...     TOGGLE (<Space>tw = line wrap)
+<Space>t...     TOGGLE (<Space>tw = line wrap, <Space>tv = Vietnamese)
 <Space>m...     MARKDOWN (render / glow preview)
 <Space>h...     git Hunks
 <Space>q        quit / loclist
@@ -290,6 +290,43 @@ stranded on its own line. Two ways out:
 `<Space>tw` is the better fix while editing (alignment is preserved); `:Glow` is
 the better fix while reading, because render-markdown only pads and aligns -- it
 never re-wraps text inside a cell, and has no `max_width` to cap a runaway table.
+
+### Vietnamese (`<Space>tv`)
+
+Toggles nvim's built-in `vietnamese-telex` keymap for the current buffer.
+
+```
+<Space>tv       toggle Vietnamese telex on/off (buffer-local)
+<C-^>           in insert mode, flip it off/on without leaving insert
+```
+
+**Why this exists.** Editing over SSH from a phone or tablet, Vietnamese often
+stops working: Android terminal apps (Termius, Termux) declare their input as
+"raw, no suggestions", and keyboards respond by switching off the composing
+region -- which is exactly what Telex needs. So `tieengs` arrives literally
+instead of `tiếng`, and no amount of configuration on the server changes that,
+because the composing is supposed to happen on the phone. This keymap sidesteps
+the problem by doing the composing inside nvim, on this side of the wire.
+
+**One catch.** It is a lookup table, not a real Telex engine, so **the tone goes
+immediately after its vowel**, not at the end of the syllable:
+
+| Type | Get | |
+|---|---|---|
+| `tieesng` | `tiếng` | correct |
+| `tieengs` | `tiêngs` | tone at the end is dropped |
+| `chafo` | `chào` | correct |
+| `chaof` | `chaò` | tone lands on the wrong vowel |
+| `dduwowjc` | `được` | correct |
+
+`aa ee oo` give `â ê ô`, `w` gives `ư ơ ă`, `dd` gives `đ`, and `s f r x j` are
+sắc huyền hỏi ngã nặng. It is buffer-local on purpose -- you want it in prose,
+not while editing code.
+
+It only helps inside nvim. The shell, tmux and any TUI still receive whatever
+the phone keyboard sends, so if you need Vietnamese there too, the fix has to be
+on the client: a different Android keyboard, or a browser-based terminal (browser
+text fields still compose normally).
 
 ---
 
