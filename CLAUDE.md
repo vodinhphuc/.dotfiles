@@ -77,6 +77,7 @@ Current scripts:
 
 | `terminator.sh` | Terminator, sets as default terminal (Ctrl+Alt+T) |
 | `tpm.sh` | Tmux Plugin Manager |
+| `ttyd.sh` | ttyd web terminal as a systemd **user** service, bound to `tailscale0` (never `0.0.0.0`), attaching `tmux new -A -s dotfile`. Exists so Vietnamese can be typed from a tablet: Android terminal apps disable the keyboard's composing region, browsers do not. Hooks: `TTYD_PORT`/`TTYD_INTERFACE`/`TTYD_TMUX_SESSION`/`TTYD_CONFIG_DIR`/`TTYD_SYSTEMD_USER_DIR`, plus `TTYD_FORCE_PKG_INSTALLED`/`TTYD_SKIP_SYSTEMCTL` for tests. Reference: `docs/guides/ttyd.md` |
 | `uv.sh` | uv + uvx (Python pkg/project manager), pre-generates zsh completions to `~/.config/uv` |
 | `visual_code.sh` | VS Code (Microsoft apt repo — unconfined so ibus input methods work) |
 
