@@ -255,6 +255,16 @@ assert_exit_zero "gh.sh exits 0 when already installed" "$code"
 assert_output_contains "gh.sh prints 'Already installed: gh'" "Already installed: gh" "$output"
 rm -f "$BIN_DIR/gh"
 
+# --- shellcheck.sh: skip when shellcheck already in PATH ---
+echo ""
+echo "=== shellcheck.sh: skip when already installed ==="
+mock_cmd shellcheck
+output=$(PATH="$BIN_DIR:$PATH" bash "$DOTFILES_DIR/scripts/programs/shellcheck.sh" 2>&1)
+code=$?
+assert_exit_zero "shellcheck.sh exits 0 when already installed" "$code"
+assert_output_contains "shellcheck.sh prints 'Already installed: shellcheck'" "Already installed: shellcheck" "$output"
+rm -f "$BIN_DIR/shellcheck"
+
 # --- terminator.sh: should NOT say "Already installed" when terminator is absent ---
 echo ""
 echo "=== terminator.sh: does NOT say 'Already installed' when terminator is absent ==="
@@ -410,6 +420,44 @@ for script in "$DOTFILES_DIR"/scripts/programs/*.sh; do
         FAIL=$((FAIL + 1))
     fi
 done
+
+# --- ShellCheck lint (enforced: every repo script must pass `shellcheck -x`) ---
+echo ""
+echo "=== ShellCheck lint ==="
+# scripts/ is uniformly *.sh, but .local/bin holds extensionless stowed CLIs
+# (fan, rgb) sitting next to runtime-installed binaries (uv, uvx) and symlinks,
+# which shellcheck cannot read. Select those by shebang instead of globbing
+# blindly, and read only the first line -- uv is ~60MB.
+lint_targets() {
+    local f shebang
+    for f in "$DOTFILES_DIR"/scripts/*.sh "$DOTFILES_DIR"/scripts/programs/*.sh; do
+        [ -f "$f" ] && printf '%s\n' "$f"
+    done
+    for f in "$DOTFILES_DIR"/.local/bin/*; do
+        [ -f "$f" ] || continue
+        [ -L "$f" ] && continue
+        shebang="$(head -c 128 "$f" 2>/dev/null | head -1)"
+        if [[ "$shebang" =~ ^#!.*[/[:space:]](ba)?sh([[:space:]]|$) ]]; then
+            printf '%s\n' "$f"
+        fi
+    done
+}
+
+if command -v shellcheck >/dev/null 2>&1; then
+    while IFS= read -r script; do
+        name="${script#"$DOTFILES_DIR"/}"
+        if shellcheck -x "$script" >/dev/null 2>&1; then
+            echo "  PASS: $name shellcheck clean"
+            PASS=$((PASS + 1))
+        else
+            echo "  FAIL: $name has shellcheck findings"
+            shellcheck -x "$script" 2>&1 | sed 's/^/        /'
+            FAIL=$((FAIL + 1))
+        fi
+    done < <(lint_targets)
+else
+    echo "  SKIP: shellcheck not installed — run 'bash scripts/programs/shellcheck.sh' to enable this check"
+fi
 
 # --- Summary ---
 echo ""

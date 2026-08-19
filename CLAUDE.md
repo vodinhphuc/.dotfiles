@@ -21,9 +21,12 @@ stow .
 # Run a single program script in isolation
 bash scripts/programs/<name>.sh
 
-# Run all tests (no sudo, no network)
+# Run all tests (no sudo, no network) — includes the enforced shellcheck lint
 bash scripts/test_programs.sh
 bash scripts/test_orchestrator.sh
+
+# Lint every script directly (must be clean before committing)
+shellcheck -x scripts/*.sh scripts/programs/*.sh
 ```
 
 ## Architecture
@@ -65,6 +68,7 @@ Current scripts:
 | `ibus_unikey.sh` | ibus, ibus-unikey, configures GNOME input sources |
 | `miniconda.sh` | Miniconda3 to `~/miniconda3` |
 | `neovim.sh` | Neovim (snap on native, official release tarball on WSL) + IDE deps + tree-sitter CLI |
+| `shellcheck.sh` | shellcheck (static analysis linter for the repo's shell scripts) |
 | `terminator.sh` | Terminator, sets as default terminal (Ctrl+Alt+T) |
 | `tpm.sh` | Tmux Plugin Manager |
 | `uv.sh` | uv + uvx (Python pkg/project manager), pre-generates zsh completions to `~/.config/uv` |
@@ -80,12 +84,13 @@ Read/write wrapper over the raw hwmon `pwm` sysfs files (stowed onto `PATH`), co
 
 ## How to extend
 
-**Add a program:** Create `scripts/programs/<name>.sh` with an idempotency guard. It is picked up automatically by `install.sh`. Add a matching test case to `scripts/test_programs.sh`.
+**Add a program:** Create `scripts/programs/<name>.sh` with an idempotency guard. It is picked up automatically by `install.sh`. Add a matching test case to `scripts/test_programs.sh`, and make sure it passes `shellcheck -x` (the test suite enforces this).
 
 **Add a dotfile:** Place the config file in the repo root at the path it should have relative to `~/`, then run `stow .`.
 
 ## Coding conventions
 
+- **Every shell script MUST pass `shellcheck -x` with zero findings** (default severity — errors, warnings, info, and style). This is enforced by `scripts/test_programs.sh`, which fails the build on any finding. Run `shellcheck -x scripts/**/*.sh` before committing; fix issues rather than suppressing them. If a warning is a genuine false positive, silence it with a **targeted, commented** `# shellcheck disable=SCXXXX` on the specific line (never a blanket file-level or repo-level disable). Install it via `bash scripts/programs/shellcheck.sh`.
 - All scripts: `#!/bin/bash` + `set -euo pipefail`
 - Scripts are guarded with `[[ "${BASH_SOURCE[0]}" == "${0}" ]]` only when they define reusable functions that tests source directly
 - Tests mock `sudo`, `apt-get`, and external commands by prepending a `$BIN_DIR` to `PATH`; they never require network or root
