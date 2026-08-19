@@ -347,6 +347,7 @@ never re-wraps text inside a cell, and has no `max_width` to cap a runaway table
 | Table rows sprawl over several lines with a stray `\|` alone on one | The table is wider than the window and `wrap` is on. `<Space>tw` turns wrap off (one row per line, scroll sideways); `<Space>mp` reads it in glow, which reflows cell contents. |
 | `:Glow` opens but looks flat and grey | glow only colours output it thinks is a terminal. `init.lua` sets `CLICOLOR_FORCE=1` around the spawn — if you changed that spec, put it back. |
 | You're trapped in some weird state | `Esc Esc Esc`, then `:q!` |
+| Icons show as empty boxes (which-key, Telescope, statusline) | Font problem, not a config problem — see [`docs/troubleshooting/terminal-icons-tofu.md`](../troubleshooting/terminal-icons-tofu.md). Fonts are resolved by *your* terminal, so a remote client needs its own. |
 
 ---
 

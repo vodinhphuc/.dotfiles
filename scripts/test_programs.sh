@@ -57,6 +57,17 @@ assert_file_exists() {
     fi
 }
 
+assert_dir_exists() {
+    local desc="$1" dir="$2"
+    if [ -d "$dir" ]; then
+        echo "  PASS: $desc"
+        PASS=$((PASS + 1))
+    else
+        echo "  FAIL: $desc (directory not found: $dir)"
+        FAIL=$((FAIL + 1))
+    fi
+}
+
 # --- Setup ---
 TEST_DIR="$(mktemp -d)"
 trap 'rm -rf "$TEST_DIR"' EXIT
@@ -112,16 +123,73 @@ assert_exit_zero "tpm.sh exits 0 when install_plugins present" "$code"
 assert_file_exists "tpm.sh invokes install_plugins" "$SENTINEL"
 assert_output_contains "tpm.sh announces plugin install" "Installing tmux plugins" "$output"
 
-# --- neovim.sh: skip when nvim already in PATH ---
+# Reports every queried package as installed, so the apt-dep step is skipped.
+mock_dpkg_query_all_installed() {
+    printf '#!/bin/bash\necho "install ok installed"\nexit 0\n' > "$BIN_DIR/dpkg-query"
+    chmod +x "$BIN_DIR/dpkg-query"
+}
+
+# Logging mocks: record argv instead of executing, so nothing is really installed.
+mock_logging_cmds() {
+    local log="$1"; shift
+    local cmd
+    for cmd in "$@"; do
+        cat > "$BIN_DIR/$cmd" <<EOF
+#!/bin/bash
+echo "$cmd \$*" >> "$log"
+exit 0
+EOF
+        chmod +x "$BIN_DIR/$cmd"
+    done
+}
+
+# --- neovim.sh: skip every step when nvim, deps, and tree-sitter are present ---
 echo ""
 echo "=== neovim.sh: skip when already installed ==="
+NEOVIM_SKIP_LOG="$TEST_DIR/neovim_skip_calls.log"
+: > "$NEOVIM_SKIP_LOG"
+MOCK_HOME="$TEST_DIR/home_nvim_skip"
+mkdir -p "$MOCK_HOME"
 mock_cmd nvim
-output=$(PATH="$BIN_DIR:$PATH" bash "$DOTFILES_DIR/scripts/programs/neovim.sh" 2>&1)
+mock_cmd tree-sitter
+mock_dpkg_query_all_installed
+mock_logging_cmds "$NEOVIM_SKIP_LOG" sudo apt-get npm snap
+output=$(PATH="$BIN_DIR" HOME="$MOCK_HOME" /bin/bash "$DOTFILES_DIR/scripts/programs/neovim.sh" 2>&1)
 code=$?
+log_content="$(cat "$NEOVIM_SKIP_LOG" 2>/dev/null)"
 assert_exit_zero "neovim.sh exits 0 when already installed" "$code"
 assert_output_contains "neovim.sh prints 'Already installed: neovim'" "Already installed: neovim" "$output"
-# Cleanup so later tests don't see this nvim mock
-rm -f "$BIN_DIR/nvim"
+assert_output_contains "neovim.sh prints 'Already installed: tree-sitter CLI'" "Already installed: tree-sitter CLI" "$output"
+assert_output_not_contains "neovim.sh does not reinstall nvim when present" "snap install" "$log_content"
+assert_output_not_contains "neovim.sh does not reinstall tree-sitter when present" "npm install" "$log_content"
+rm -f "$BIN_DIR/nvim" "$BIN_DIR/tree-sitter" "$BIN_DIR/dpkg-query" \
+      "$BIN_DIR/sudo" "$BIN_DIR/apt-get" "$BIN_DIR/npm" "$BIN_DIR/snap"
+
+# --- neovim.sh: installs tree-sitter CLI even when nvim is already present ---
+# Regression guard. The script used to `exit 0` on `command -v nvim`, which made
+# every step below it unreachable on a machine that already had nvim. The
+# tree-sitter CLI was added after those machines were provisioned, so it never
+# installed, and nvim-treesitter failed to compile every parser on startup with
+# "ENOENT: no such file or directory (cmd): 'tree-sitter'".
+echo ""
+echo "=== neovim.sh: installs tree-sitter CLI when nvim present but CLI missing ==="
+NEOVIM_TS_LOG="$TEST_DIR/neovim_ts_calls.log"
+: > "$NEOVIM_TS_LOG"
+MOCK_HOME="$TEST_DIR/home_nvim_ts"
+mkdir -p "$MOCK_HOME"
+mock_cmd nvim
+mock_dpkg_query_all_installed
+mock_logging_cmds "$NEOVIM_TS_LOG" sudo apt-get npm snap
+output=$(PATH="$BIN_DIR" HOME="$MOCK_HOME" /bin/bash "$DOTFILES_DIR/scripts/programs/neovim.sh" 2>&1)
+code=$?
+log_content="$(cat "$NEOVIM_TS_LOG" 2>/dev/null)"
+assert_exit_zero "neovim.sh exits 0 when nvim present but tree-sitter missing" "$code"
+assert_output_contains "neovim.sh installs tree-sitter CLI despite nvim being present" "npm install -g --prefix" "$log_content"
+assert_output_contains "neovim.sh installs the tree-sitter-cli package" "tree-sitter-cli" "$log_content"
+assert_output_not_contains "neovim.sh does not reinstall nvim when present" "snap install" "$log_content"
+assert_output_not_contains "neovim.sh installs tree-sitter CLI without sudo" "sudo npm" "$log_content"
+rm -f "$BIN_DIR/nvim" "$BIN_DIR/dpkg-query" \
+      "$BIN_DIR/sudo" "$BIN_DIR/apt-get" "$BIN_DIR/npm" "$BIN_DIR/snap"
 
 # --- neovim.sh: installs neovim and deps when absent ---
 echo ""
@@ -150,14 +218,19 @@ echo "npm \$*" >> "$NEOVIM_LOG"
 exit 0
 EOF
 chmod +x "$BIN_DIR/npm"
-# Run with isolated PATH (no nvim, no go) + mocked sudo + mocked snap/apt/npm
-output=$(PATH="$BIN_DIR" /bin/bash "$DOTFILES_DIR/scripts/programs/neovim.sh" 2>&1) || true
+# Run with isolated PATH (no nvim, no go) + mocked sudo + mocked snap/apt/npm.
+# HOME is isolated too: the script prepends $HOME/.npm-global/bin to PATH, so a
+# real tree-sitter in the developer's home would otherwise mask the install step.
+MOCK_HOME="$TEST_DIR/home_nvim_absent"
+mkdir -p "$MOCK_HOME"
+output=$(PATH="$BIN_DIR" HOME="$MOCK_HOME" /bin/bash "$DOTFILES_DIR/scripts/programs/neovim.sh" 2>&1) || true
 log_content="$(cat "$NEOVIM_LOG" 2>/dev/null)"
 assert_output_contains "neovim.sh installs nvim via snap with classic confinement" "snap install nvim --classic" "$log_content"
 assert_output_contains "neovim.sh installs ripgrep (Telescope dep)" "ripgrep" "$log_content"
 assert_output_contains "neovim.sh installs fd-find (Telescope dep)" "fd-find" "$log_content"
 assert_output_contains "neovim.sh installs nodejs (for Mason-managed LSPs)" "nodejs" "$log_content"
-assert_output_contains "neovim.sh installs tree-sitter-cli via npm" "npm install -g tree-sitter-cli" "$log_content"
+assert_output_contains "neovim.sh installs tree-sitter-cli via npm" "npm install -g --prefix" "$log_content"
+assert_output_contains "neovim.sh installs the tree-sitter-cli package" "tree-sitter-cli" "$log_content"
 assert_output_contains "neovim.sh notes missing go toolchain" "Mason will skip gopls" "$output"
 # Cleanup: remove the logging mocks so they don't affect later tests
 rm -f "$BIN_DIR/apt-get" "$BIN_DIR/snap" "$BIN_DIR/npm" "$BIN_DIR/sudo"
@@ -179,13 +252,82 @@ done
 # The WSL branch needs real uname/mktemp/rm; symlink them into BIN_DIR so we can
 # keep PATH isolated (PATH=$BIN_DIR only) and hide any real nvim on the system.
 for bin in uname mktemp rm; do ln -sf "$(command -v "$bin")" "$BIN_DIR/$bin"; done
-output=$(PATH="$BIN_DIR" ENVIRONMENT=wsl /bin/bash "$DOTFILES_DIR/scripts/programs/neovim.sh" 2>&1) || true
+MOCK_HOME="$TEST_DIR/home_nvim_wsl"
+mkdir -p "$MOCK_HOME"
+output=$(PATH="$BIN_DIR" HOME="$MOCK_HOME" ENVIRONMENT=wsl /bin/bash "$DOTFILES_DIR/scripts/programs/neovim.sh" 2>&1) || true
 log_content="$(cat "$NEOVIM_WSL_LOG" 2>/dev/null)"
 assert_output_contains "WSL neovim.sh downloads the official release tarball" "neovim/releases/latest/download" "$log_content"
 assert_output_contains "WSL neovim.sh symlinks nvim onto PATH" "ln -sf /opt/nvim/bin/nvim" "$log_content"
 assert_output_not_contains "WSL neovim.sh does NOT use snap" "snap install" "$log_content"
 assert_output_contains "WSL neovim.sh still installs ripgrep dep" "ripgrep" "$log_content"
 rm -f "$BIN_DIR/sudo" "$BIN_DIR/curl" "$BIN_DIR/apt-get" "$BIN_DIR/npm" "$BIN_DIR/uname" "$BIN_DIR/mktemp" "$BIN_DIR/rm"
+
+# --- nerd_font.sh: skip when the font is already registered with fontconfig ---
+echo ""
+echo "=== nerd_font.sh: skip when already installed ==="
+NERD_SKIP_LOG="$TEST_DIR/nerd_skip_calls.log"
+: > "$NERD_SKIP_LOG"
+MOCK_HOME="$TEST_DIR/home_nerd_skip"
+mkdir -p "$MOCK_HOME"
+# The mock must emit MANY lines after the match. A `grep -q` guard exits on the
+# first hit and SIGPIPEs the producer; under `set -o pipefail` that fails the
+# whole pipeline and the guard misfires, reinstalling on every run. A one-line
+# mock cannot reproduce it -- the real fc-list emits ~630 lines.
+cat > "$BIN_DIR/fc-list" <<'FCEOF'
+#!/bin/bash
+echo "/home/u/.local/share/fonts/JetBrainsMonoNerdFont-Regular.ttf: JetBrainsMono Nerd Font Mono:style=Regular"
+i=0
+while [ $i -lt 20000 ]; do
+    echo "/usr/share/fonts/filler-$i.ttf: Filler Face $i:style=Regular"
+    i=$((i + 1))
+done
+FCEOF
+chmod +x "$BIN_DIR/fc-list"
+mock_logging_cmds "$NERD_SKIP_LOG" curl unzip fc-cache
+for bin in grep mkdir mktemp rm find cp cat; do ln -sf "$(command -v "$bin")" "$BIN_DIR/$bin"; done
+output=$(PATH="$BIN_DIR" HOME="$MOCK_HOME" /bin/bash "$DOTFILES_DIR/scripts/programs/nerd_font.sh" 2>&1)
+code=$?
+log_content="$(cat "$NERD_SKIP_LOG" 2>/dev/null)"
+assert_exit_zero "nerd_font.sh exits 0 when already installed" "$code"
+assert_output_contains "nerd_font.sh prints 'Already installed'" "Already installed: JetBrainsMono Nerd Font" "$output"
+assert_output_not_contains "nerd_font.sh does not re-download the font" "curl" "$log_content"
+assert_output_contains "nerd_font.sh still prints the manual follow-up steps" "have_nerd_font = true" "$output"
+
+# --- nerd_font.sh: downloads and installs when the font is absent ---
+echo ""
+echo "=== nerd_font.sh: installs when absent ==="
+NERD_LOG="$TEST_DIR/nerd_calls.log"
+: > "$NERD_LOG"
+MOCK_HOME="$TEST_DIR/home_nerd_install"
+mkdir -p "$MOCK_HOME"
+printf '#!/bin/bash\nexit 0\n' > "$BIN_DIR/fc-list"   # no fonts registered
+chmod +x "$BIN_DIR/fc-list"
+mock_logging_cmds "$NERD_LOG" curl unzip fc-cache
+output=$(PATH="$BIN_DIR" HOME="$MOCK_HOME" /bin/bash "$DOTFILES_DIR/scripts/programs/nerd_font.sh" 2>&1)
+code=$?
+log_content="$(cat "$NERD_LOG" 2>/dev/null)"
+assert_exit_zero "nerd_font.sh exits 0 when installing" "$code"
+assert_output_contains "nerd_font.sh downloads from the nerd-fonts releases" "ryanoasis/nerd-fonts/releases" "$log_content"
+assert_output_contains "nerd_font.sh refreshes the fontconfig cache" "fc-cache -f" "$log_content"
+assert_dir_exists "nerd_font.sh creates the user font dir" "$MOCK_HOME/.local/share/fonts"
+assert_output_not_contains "nerd_font.sh never uses sudo" "sudo" "$log_content"
+
+# --- nerd_font.sh: font name is overridable ---
+echo ""
+echo "=== nerd_font.sh: honors NERD_FONT_NAME override ==="
+NERD_ALT_LOG="$TEST_DIR/nerd_alt_calls.log"
+: > "$NERD_ALT_LOG"
+MOCK_HOME="$TEST_DIR/home_nerd_alt"
+mkdir -p "$MOCK_HOME"
+mock_logging_cmds "$NERD_ALT_LOG" curl unzip fc-cache
+output=$(PATH="$BIN_DIR" HOME="$MOCK_HOME" NERD_FONT_NAME=FiraCode NERD_FONT_MATCH="FiraCode Nerd Font" \
+    /bin/bash "$DOTFILES_DIR/scripts/programs/nerd_font.sh" 2>&1)
+log_content="$(cat "$NERD_ALT_LOG" 2>/dev/null)"
+assert_output_contains "nerd_font.sh downloads the overridden font" "FiraCode.zip" "$log_content"
+assert_output_not_contains "nerd_font.sh does not download the default font" "JetBrainsMono.zip" "$log_content"
+rm -f "$BIN_DIR/fc-list" "$BIN_DIR/curl" "$BIN_DIR/unzip" "$BIN_DIR/fc-cache" \
+      "$BIN_DIR/grep" "$BIN_DIR/mkdir" "$BIN_DIR/mktemp" "$BIN_DIR/rm" \
+      "$BIN_DIR/find" "$BIN_DIR/cp" "$BIN_DIR/cat"
 
 # --- miniconda.sh: skip when miniconda3 dir exists ---
 echo ""
@@ -395,6 +537,63 @@ assert_exit_zero "fan_control.sh exits 0 when dpkg-query reports installed" "$co
 assert_output_contains "fan_control.sh skips via real dpkg-query path" "Already installed: fan_control" "$output"
 rm -f "$BIN_DIR/dpkg-query" "$BIN_DIR/sudo"
 
+# --- openrgb.sh: skip when already installed ---
+echo ""
+echo "=== openrgb.sh: skip when already installed ==="
+mock_sudo
+MOCK_HOME="$TEST_DIR/home_orgb_skip"
+mkdir -p "$MOCK_HOME/etc/modules-load.d" "$MOCK_HOME/etc/systemd/system"
+touch "$MOCK_HOME/etc/modules-load.d/openrgb.conf"
+touch "$MOCK_HOME/etc/systemd/system/openrgb-off.service"
+output=$(PATH="$BIN_DIR:$PATH" \
+    OPENRGB_MODULES_LOAD_DIR="$MOCK_HOME/etc/modules-load.d" \
+    OPENRGB_SYSTEMD_DIR="$MOCK_HOME/etc/systemd/system" \
+    OPENRGB_FORCE_PKG_INSTALLED=1 \
+    bash "$DOTFILES_DIR/scripts/programs/openrgb.sh" 2>&1)
+code=$?
+assert_exit_zero "openrgb.sh exits 0 when already installed" "$code"
+assert_output_contains "openrgb.sh prints 'Already installed: openrgb'" "Already installed: openrgb" "$output"
+rm -f "$BIN_DIR/sudo"
+
+# --- openrgb.sh: installs pkgs, loads modules, sets LEDs off, installs service ---
+echo ""
+echo "=== openrgb.sh: installs, persists modules, enables service ==="
+ORGB_LOG="$TEST_DIR/orgb_calls.log"
+: > "$ORGB_LOG"
+mock_sudo
+for cmd in apt-get modprobe openrgb systemctl; do
+    cat > "$BIN_DIR/$cmd" <<EOF
+#!/bin/bash
+echo "$cmd \$*" >> "$ORGB_LOG"
+exit 0
+EOF
+    chmod +x "$BIN_DIR/$cmd"
+done
+cat > "$BIN_DIR/tee" <<EOF
+#!/bin/bash
+echo "tee \$*" >> "$ORGB_LOG"
+/bin/cat > "\$1"
+exit 0
+EOF
+chmod +x "$BIN_DIR/tee"
+MOCK_HOME="$TEST_DIR/home_orgb_install"
+mkdir -p "$MOCK_HOME/etc/modules-load.d" "$MOCK_HOME/etc/systemd/system"
+output=$(PATH="$BIN_DIR:$PATH" \
+    OPENRGB_MODULES_LOAD_DIR="$MOCK_HOME/etc/modules-load.d" \
+    OPENRGB_SYSTEMD_DIR="$MOCK_HOME/etc/systemd/system" \
+    OPENRGB_FORCE_PKG_INSTALLED=0 \
+    bash "$DOTFILES_DIR/scripts/programs/openrgb.sh" 2>&1) || true
+log_content="$(cat "$ORGB_LOG" 2>/dev/null)"
+assert_output_contains "openrgb.sh apt-installs openrgb" "openrgb" "$log_content"
+assert_output_contains "openrgb.sh apt-installs i2c-tools" "i2c-tools" "$log_content"
+assert_output_contains "openrgb.sh modprobes i2c-dev" "modprobe i2c-dev" "$log_content"
+assert_output_contains "openrgb.sh sets LEDs off (static black)" "openrgb --mode static --color 000000" "$log_content"
+assert_output_contains "openrgb.sh enables openrgb-off service" "systemctl enable --now openrgb-off.service" "$log_content"
+assert_file_exists "openrgb.sh writes /etc/modules-load.d/openrgb.conf" "$MOCK_HOME/etc/modules-load.d/openrgb.conf"
+assert_file_exists "openrgb.sh writes openrgb-off.service" "$MOCK_HOME/etc/systemd/system/openrgb-off.service"
+assert_output_contains "openrgb.sh prints BIOS firmware-LED pointer" "list-devices" "$output"
+rm -f "$BIN_DIR/apt-get" "$BIN_DIR/modprobe" "$BIN_DIR/openrgb" "$BIN_DIR/systemctl" "$BIN_DIR/tee" "$BIN_DIR/sudo"
+
 # --- fan CLI: dispatch to dedicated test file ---
 echo ""
 echo "=== fan CLI ==="
@@ -403,6 +602,17 @@ if bash "$DOTFILES_DIR/scripts/test_fan_cli.sh"; then
     PASS=$((PASS + 1))
 else
     echo "  FAIL: fan CLI suite"
+    FAIL=$((FAIL + 1))
+fi
+
+# --- rgb CLI: dispatch to dedicated test file ---
+echo ""
+echo "=== rgb CLI ==="
+if bash "$DOTFILES_DIR/scripts/test_rgb_cli.sh"; then
+    echo "  PASS: rgb CLI suite"
+    PASS=$((PASS + 1))
+else
+    echo "  FAIL: rgb CLI suite"
     FAIL=$((FAIL + 1))
 fi
 

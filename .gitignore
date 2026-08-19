@@ -16,3 +16,4 @@ conda-zsh-completion
 # committed. The `fan` CLI is a tracked repo script, so keep it.
 .local/bin/*
 !.local/bin/fan
+!.local/bin/rgb

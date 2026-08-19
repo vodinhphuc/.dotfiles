@@ -42,7 +42,7 @@ Orchestrator. Runs once on a fresh machine (or resumes after failure):
 1. Parse flags (`--all`/`-a` to skip the menu, `--native`/`--wsl` to force the target, `--help`/`-h`)
 2. Disable the install-media (`cdrom`) apt source so `apt update` can't break
 3. Resolve the install **target**: `detect_environment` returns `wsl` (when `$WSL_DISTRO_NAME` is set or `/proc/version` mentions microsoft) or `native`. `--native`/`--wsl` override; otherwise `choose_environment` prompts interactively. Sets `ENVIRONMENT`.
-4. `build_plan` discovers the two phases (`system update`, `base packages`) plus one entry per `scripts/programs/*.sh`. Defaults respect the target: programs in `NATIVE_ONLY_PROGRAMS` (`docker fan_control ibus_unikey terminator visual_code`) start **deselected on WSL** (still visible/toggleable, tagged `(desktop/native)`)
+4. `build_plan` discovers the two phases (`system update`, `base packages`) plus one entry per `scripts/programs/*.sh`. Defaults respect the target: programs in `NATIVE_ONLY_PROGRAMS` (`docker fan_control ibus_unikey nerd_font openrgb terminator visual_code`) start **deselected on WSL** (still visible/toggleable, tagged `(desktop/native)`)
 5. Selection: `--all` accepts the target-aware defaults; an interactive TTY shows `select_menu` (↑/↓ or j/k to move, space to toggle, `a`/`n` all/none, `q` to abort, Enter to confirm); no TTY without `--all` errors out
 6. `apply_stow` (always) installs `stow` and applies symlinks
 7. `run_plan` runs the selected phases (`system_update`, `install_base`) and programs (via `run_step`); `apt upgrade`/`autoremove` run only if `system update` was selected. `install_base` also skips `chrome-gnome-shell`/`nvtop` on WSL.
@@ -67,12 +67,30 @@ Current scripts:
 | `glow.sh` | glow (Charm apt repo) + bat (markdown / syntax-highlighted reading) |
 | `ibus_unikey.sh` | ibus, ibus-unikey, configures GNOME input sources |
 | `miniconda.sh` | Miniconda3 to `~/miniconda3` |
-| `neovim.sh` | Neovim (snap on native, official release tarball on WSL) + IDE deps + tree-sitter CLI |
+| `neovim.sh` | Neovim (snap on native, official release tarball on WSL) + IDE deps + tree-sitter CLI (unprivileged, to `~/.npm-global`) |
+| `nerd_font.sh` | JetBrainsMono Nerd Font to `~/.local/share/fonts` (no sudo). Override with `NERD_FONT_NAME`/`NERD_FONT_MATCH`. Terminal font + `have_nerd_font = true` stay manual |
+| `openrgb.sh` | OpenRGB + i2c-tools; turns all RGB LEDs off now and via a boot-time systemd service (native-only). Per-device control: `.local/bin/rgb` / `docs/guides/rgb.md` |
+
+| `openrgb.sh` | OpenRGB + i2c-tools; turns all RGB LEDs off now and via a boot-time systemd service (native-only) |
+
 | `shellcheck.sh` | shellcheck (static analysis linter for the repo's shell scripts) |
+
 | `terminator.sh` | Terminator, sets as default terminal (Ctrl+Alt+T) |
 | `tpm.sh` | Tmux Plugin Manager |
 | `uv.sh` | uv + uvx (Python pkg/project manager), pre-generates zsh completions to `~/.config/uv` |
 | `visual_code.sh` | VS Code (Microsoft apt repo — unconfined so ibus input methods work) |
+
+### `.local/bin/rgb`
+
+Friendly per-device wrapper around OpenRGB (stowed onto `PATH`), companion to `scripts/programs/openrgb.sh`. Subcommands `list`/`status`/`colors`/`off`/`on`/`mode`/`persist` mirror the `.local/bin/fan` CLI style. Targets a device by index or case-insensitive name substring (omit = all); accepts named colors or 6-digit hex. `rgb persist on|off` toggles the `openrgb-off.service` boot service, and `on`/`mode` warn when that service will override the change at next boot. Testable via env hooks `OPENRGB_BIN`, `RGB_DRY_RUN=1`, `RGB_SUDO=` (unit-tested in `scripts/test_rgb_cli.sh`, dispatched from `test_programs.sh`). Full reference: `docs/guides/rgb.md`.
+
+### `scripts/mount_disk.sh`
+
+Standalone interactive utility (NOT in `programs/`, so `install.sh` never auto-runs it) to persistently mount a data partition to a folder. Safety-first: skips mounted/system/container (LUKS/LVM/RAID) volumes, treats desktop udisks auto-mounts (`/run/media`, `/media`) as transient and releases them before mounting, identifies disks by UUID, backs up `/etc/fstab` and uses `nofail` before test-mounting, and rolls back on any failure. Includes a **Filesystem** step: keep the existing filesystem (for NTFS, choose the `ntfs3` kernel driver [default] or `ntfs-3g`), or **reformat to ext4** — the only destructive path, gated by a typed `ERASE <dev>` confirmation and re-reading the new UUID after `mkfs`. `--dry-run` previews everything and is provably side-effect-free (all mutations are after the dry-run exit gate). Run `bash scripts/mount_disk.sh` (or `--dry-run`).
+
+### `docs/troubleshooting/`
+
+Incident post-mortems for hardware/OS problems that have actually happened on this machine — structured as triage commands → root-cause table → per-cause fix → lessons learned. Distinct from `docs/guides/` (how to *use* a tool). `nvidia-monitor-no-signal.md` covers a lost second monitor and its three known root causes (missing per-kernel NVIDIA module, bad cable, compositor state). Check here before debugging a recurring system symptom from scratch; `docs/troubleshooting/README.md` has the template for adding one.
 
 ### `.config/nvim/init.lua`
 
@@ -88,10 +106,13 @@ Read/write wrapper over the raw hwmon `pwm` sysfs files (stowed onto `PATH`), co
 
 **Add a dotfile:** Place the config file in the repo root at the path it should have relative to `~/`, then run `stow .`.
 
+**Add a troubleshooting note:** Create `docs/troubleshooting/<symptom>.md` following the template in that folder's `README.md`, and link it from both `README.md` tables.
+
 ## Coding conventions
 
 - **Every shell script MUST pass `shellcheck -x` with zero findings** (default severity — errors, warnings, info, and style). This is enforced by `scripts/test_programs.sh`, which fails the build on any finding. Run `shellcheck -x scripts/**/*.sh` before committing; fix issues rather than suppressing them. If a warning is a genuine false positive, silence it with a **targeted, commented** `# shellcheck disable=SCXXXX` on the specific line (never a blanket file-level or repo-level disable). Install it via `bash scripts/programs/shellcheck.sh`.
 - All scripts: `#!/bin/bash` + `set -euo pipefail`
+- Program scripts guard **each step**, never the whole script. A top-level `command -v X && exit 0` makes every step below it unreachable on an already-provisioned machine, so dependencies added later never install. This is not hypothetical: it silently blocked the tree-sitter CLI for months and left nvim-treesitter unable to compile any parser. Use `if ... else ... fi` per step, each printing `Already installed: <name>`
 - Scripts are guarded with `[[ "${BASH_SOURCE[0]}" == "${0}" ]]` only when they define reusable functions that tests source directly
 - Tests mock `sudo`, `apt-get`, and external commands by prepending a `$BIN_DIR` to `PATH`; they never require network or root
 - `.install_state`, `.install_errors`, and `.install.log` are gitignored runtime files

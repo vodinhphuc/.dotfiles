@@ -104,8 +104,11 @@ P.S. You can delete this when you're done too. It's your config now! :)
 vim.g.mapleader = ' '
 vim.g.maplocalleader = ' '
 
--- Set to true if you have a Nerd Font installed and selected in the terminal
-vim.g.have_nerd_font = false
+-- Set to true if you have a Nerd Font installed and selected in the terminal.
+-- Both halves matter: `scripts/programs/nerd_font.sh` installs JetBrainsMono,
+-- and the terminal must actually be pointed at it. Flipping this while the
+-- terminal still uses an unpatched font renders every icon as a tofu box.
+vim.g.have_nerd_font = true
 
 -- [[ Setting options ]]
 -- See `:help vim.o`
@@ -341,7 +344,47 @@ require('lazy').setup({
     opts = {
       -- delay between pressing a key and opening which-key (milliseconds)
       delay = 0,
-      icons = { mappings = vim.g.have_nerd_font },
+      icons = {
+        mappings = vim.g.have_nerd_font,
+
+        -- `mappings = false` only drops the icon beside each description. The
+        -- `keys` table below is independent of that flag and defaults to Nerd
+        -- Font Private Use Area glyphs (Space is U+F1050), so without a patched
+        -- font every special key renders as a tofu box. Fall back to plain text.
+        keys = vim.g.have_nerd_font and {} or {
+          Space = 'Space ',
+          Esc = 'Esc ',
+          BS = 'BS ',
+          CR = 'CR ',
+          NL = 'NL ',
+          Tab = 'Tab ',
+          Up = 'Up ',
+          Down = 'Down ',
+          Left = 'Left ',
+          Right = 'Right ',
+          C = 'C-',
+          M = 'M-',
+          D = 'D-',
+          S = 'S-',
+          ScrollWheelDown = 'ScrollDown ',
+          ScrollWheelUp = 'ScrollUp ',
+          F1 = 'F1',
+          F2 = 'F2',
+          F3 = 'F3',
+          F4 = 'F4',
+          F5 = 'F5',
+          F6 = 'F6',
+          F7 = 'F7',
+          F8 = 'F8',
+          F9 = 'F9',
+          F10 = 'F10',
+          F11 = 'F11',
+          F12 = 'F12',
+        },
+
+        -- U+279C is a dingbat many monospace fonts lack; ASCII is safe everywhere.
+        separator = vim.g.have_nerd_font and '➜' or '->',
+      },
 
       -- Document existing key chains
       spec = {
