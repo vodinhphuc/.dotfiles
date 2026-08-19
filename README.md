@@ -107,6 +107,16 @@ Read any of them in the terminal:
 glow ~/docs/guides/tmux.md
 ```
 
+## Troubleshooting notes
+
+Post-mortems for problems that have actually hit this machine — symptom, triage
+commands, root cause, fix. See [`docs/troubleshooting/`](docs/troubleshooting/).
+
+| Note | Symptom |
+|---|---|
+| [`docs/troubleshooting/nvidia-monitor-no-signal.md`](docs/troubleshooting/nvidia-monitor-no-signal.md) | One of two monitors goes dark / no signal (NVIDIA dual-display) |
+| [`docs/troubleshooting/terminal-icons-tofu.md`](docs/troubleshooting/terminal-icons-tofu.md) | Icons show as empty boxes in nvim / prompt / statusline, locally or over SSH |
+
 ## Resuming after failure
 
 If a step fails it is logged but does not stop the rest of the install:
@@ -148,6 +158,9 @@ bash scripts/install.sh
 │   │   ├── nvim.md
 │   │   ├── tmux.md
 │   │   └── cli-readers.md
+│   ├── troubleshooting/        # incident post-mortems (symptom → triage → root cause)
+│   │   ├── nvidia-monitor-no-signal.md
+│   │   └── terminal-icons-tofu.md
 │   └── superpowers/            # design specs + implementation plans (process artifacts)
 │       ├── specs/
 │       └── plans/
