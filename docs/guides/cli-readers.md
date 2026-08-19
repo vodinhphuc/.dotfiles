@@ -24,6 +24,10 @@ glow https://example.com/x.md     # render a URL directly
 glow -                            # render stdin (e.g. `cat README.md | glow -`)
 ```
 
+Inside nvim the same binary is one keypress away — `<Space>mp` opens the current
+buffer in a glow float, and `<Space>mt` toggles in-buffer rendering. See the
+[Markdown section of the nvim guide](nvim.md#markdown-reading-docs-without-leaving-nvim).
+
 Inside the pager (powered by `less`):
 
 | Key | Action |
@@ -136,6 +140,8 @@ bat --list-themes                 # all color schemes
 | Glow renders blank / wrong colors under tmux | Confirm `echo $TERM` is `screen-256color` inside tmux and `xterm-256color` outside. Confirm `.tmux.conf` has the `Tc` override. |
 | `bat` paging is annoying for piping | Use `bat -p` (plain) or `bat --paging=never`. |
 | Wrong theme | `bat --list-themes` then `export BAT_THEME="..."` in `.zshrc`. |
+| Piping glow's output strips all colour (`glow x.md \| less`) | glow only colours what it believes is a terminal. Force it: `CLICOLOR_FORCE=1 glow x.md \| less -R`. |
+| Piped glow output shows literal `#` headings | `-s auto` (the default) falls back to the `notty` theme when stdout is not a terminal, and `notty` keeps the markers. Pass `-s dark` explicitly. |
 | `glow: permission denied` reading a file under `~/.dotfiles/` | You still have the old snap-installed glow on PATH. Run `sudo snap remove glow` then `bash scripts/programs/glow.sh && hash -r`. |
 
 ---
