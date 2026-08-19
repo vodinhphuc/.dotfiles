@@ -74,6 +74,10 @@ Current scripts:
 
 Single-file kickstart.nvim config (the `lua/config/` + `lua/plugins/` split is specced but deliberately deferred — do not start it unprompted). Markdown reading is handled by two plugins added under the `<leader>m` which-key group: `render-markdown.nvim` (in-buffer styling, `<leader>mt` toggles it **globally** for the session) and `glow.nvim` (`<leader>mp` / `:Glow`, a floating glow pager). The glow spec overrides the plugin's own `Glow` command to set `CLICOLOR_FORCE=1` **around the spawn only** — glow.nvim pipes stdout rather than allocating a PTY, so glow otherwise emits no colour; exporting the var session-wide would force ANSI colour into ripgrep, git and the LSP servers. `<leader>tw` toggles `wrap`, because several tables in this repo exceed 200 columns and wrap into unreadable fragments. User-facing reference: `docs/guides/nvim.md`.
 
+### `.local/bin/fan`
+
+Read/write wrapper over the raw hwmon `pwm` sysfs files (stowed onto `PATH`), companion to `scripts/programs/fan_control.sh`. Subcommands `list`/`status`/`set`/`manual`/`auto`. Only chips matching `^(nct6|it87|f71)` are considered controllable — `nvme`/`coretemp`/`acpitz` expose temps but no PWM and are filtered out. `set` takes a 0-100 percentage (mapped onto hwmon's 0-255 range) and always writes `pwm_enable=1` **before** the duty cycle, because a channel left in automatic mode has its value overwritten by the chip almost immediately; it refuses 0 without `--force`. Writes go direct when the sysfs file is writable and fall back to `sudo tee` otherwise, which is what lets `scripts/test_fan_cli.sh` drive it against a temp-dir fixture with no root. Testable via env hooks `HWMON_ROOT`, `FAN_DRY_RUN=1`, `FAN_SUDO=`. Full reference: `docs/guides/fans.md`.
+
 ## How to extend
 
 **Add a program:** Create `scripts/programs/<name>.sh` with an idempotency guard. It is picked up automatically by `install.sh`. Add a matching test case to `scripts/test_programs.sh`.

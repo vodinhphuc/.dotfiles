@@ -99,6 +99,7 @@ In-repo references for the daily-use tools (rendered with `glow`, paged with `le
 | [`docs/guides/nvim.md`](docs/guides/nvim.md) | Modes, leader keymaps, kickstart's LSP / Telescope / Mason / formatting, reading markdown in-buffer or in glow, troubleshooting |
 | [`docs/guides/tmux.md`](docs/guides/tmux.md) | Prefix (`Ctrl-q`), sessions / windows / panes, copy-paste with tmux-yank, plugin set, workflows |
 | [`docs/guides/cli-readers.md`](docs/guides/cli-readers.md) | `glow` (markdown), `bat` (syntax-highlighted source) — quick-start, tmux notes, piping/colour gotchas |
+| [`docs/guides/fans.md`](docs/guides/fans.md) | `fan` CLI + `fancontrol` — setup, manual vs automatic control, safety notes, troubleshooting |
 
 Read any of them in the terminal:
 
