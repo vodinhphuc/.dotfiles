@@ -17,3 +17,4 @@ conda-zsh-completion
 .local/bin/*
 !.local/bin/fan
 !.local/bin/rgb
+nvim.log

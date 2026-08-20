@@ -84,7 +84,7 @@ Top-level groups:
 <Space>c...     CODE actions
 <Space>d...     DOCUMENT (symbols)
 <Space>w...     WORKSPACE (symbols)
-<Space>t...     TOGGLE (<Space>tw = line wrap, <Space>tv = Vietnamese)
+<Space>t...     TOGGLE (<Space>tw = line wrap)
 <Space>m...     MARKDOWN (render / glow preview)
 <Space>h...     git Hunks
 <Space>q        quit / loclist
@@ -291,42 +291,36 @@ stranded on its own line. Two ways out:
 the better fix while reading, because render-markdown only pads and aligns -- it
 never re-wraps text inside a cell, and has no `max_width` to cap a runaway table.
 
-### Vietnamese (`<Space>tv`)
+### Vietnamese input and Normal mode
 
-Toggles nvim's built-in `vietnamese-telex` keymap for the current buffer.
+Nothing to configure -- this happens automatically on a desktop session, and is
+documented because the failure it prevents is baffling if you meet it cold.
 
-```
-<Space>tv       toggle Vietnamese telex on/off (buffer-local)
-<C-^>           in insert mode, flip it off/on without leaving insert
-```
+**The problem.** With a Vietnamese IME active, ibus composes your keystrokes and
+*commits* the result to the terminal, which forwards it as a **bracketed paste**.
+Nvim inserts pasted text at the cursor in **any** mode. So with the IME on, every
+Normal-mode key lands in the buffer instead of running a command: `<Space>sf`
+types `sf` rather than opening Telescope. It looks exactly like being stuck in
+Insert mode, and pressing `<Esc>` does not help, because you were never in Insert
+mode to begin with.
 
-**Why this exists.** Editing over SSH from a phone or tablet, Vietnamese often
-stops working: Android terminal apps (Termius, Termux) declare their input as
-"raw, no suggestions", and keyboards respond by switching off the composing
-region -- which is exactly what Telex needs. So `tieengs` arrives literally
-instead of `tiếng`, and no amount of configuration on the server changes that,
-because the composing is supposed to happen on the phone. This keymap sidesteps
-the problem by doing the composing inside nvim, on this side of the wire.
+It is not the keymap layer. `vim.paste({'sf'}, -1)` in Normal mode inserts `sf`
+just the same.
 
-**One catch.** It is a lookup table, not a real Telex engine, so **the tone goes
-immediately after its vowel**, not at the end of the syllable:
+**The fix.** `init.lua` switches the IME off on `InsertLeave` and restores it on
+`InsertEnter`, so Normal mode always sees raw keys while Insert mode still gets
+the real Unikey engine with its normal Telex behaviour. It also fires on
+`VimEnter` (nvim starts in Normal mode) and restores on `VimLeavePre`, since
+leaving the IME switched off would break typing everywhere else.
 
-| Type | Get | |
-|---|---|---|
-| `tieesng` | `tiếng` | correct |
-| `tieengs` | `tiêngs` | tone at the end is dropped |
-| `chafo` | `chào` | correct |
-| `chaof` | `chaò` | tone lands on the wrong vowel |
-| `dduwowjc` | `được` | correct |
+Guarded on `ibus` being present *and* a display being attached, so it does
+nothing over SSH -- where the IME lives on the client -- or on WSL. Calls are
+async: `ibus engine` takes 16-40ms here, enough to feel on every `<Esc>` if it
+blocked.
 
-`aa ee oo` give `â ê ô`, `w` gives `ư ơ ă`, `dd` gives `đ`, and `s f r x j` are
-sắc huyền hỏi ngã nặng. It is buffer-local on purpose -- you want it in prose,
-not while editing code.
-
-It only helps inside nvim. The shell, tmux and any TUI still receive whatever
-the phone keyboard sends, so if you need Vietnamese there too, the fix has to be
-on the client: a different Android keyboard, or a browser-based terminal (browser
-text fields still compose normally).
+**One consequence worth knowing:** if you switch input source with `Super+Space`
+while in Normal mode, entering Insert restores whatever was active when you last
+left Insert, overriding that choice. Switch while *in* Insert mode instead.
 
 ---
 

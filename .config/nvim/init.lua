@@ -221,25 +221,59 @@ vim.keymap.set('n', '<leader>tw', function()
   vim.notify('wrap ' .. (vim.wo.wrap and 'on' or 'off'), vim.log.levels.INFO)
 end, { desc = '[T]oggle line [W]rap' })
 
--- Type Vietnamese without help from the client keyboard. Over SSH from a phone
--- or tablet, Android terminal apps declare their input as "raw, no suggestions",
--- and keyboards respond by switching off the composing region -- which is
--- exactly what Telex needs, so `tieengs` arrives literally instead of `tiếng`.
--- Nvim's built-in keymap does the composing itself, on this side of the wire,
--- so it works no matter what the remote keyboard does.
+-- Keep the system input method out of Normal mode.
 --
--- Buffer-local on purpose: you want this in prose, not while editing code.
--- Once it is on, `<C-^>` in insert mode flips it off and back without leaving
--- insert (that is vim's own 'iminsert' toggle, not something defined here).
+-- With a Vietnamese IME active, ibus composes the keystrokes and *commits* the
+-- result to the terminal, which forwards it as a bracketed paste. Nvim inserts
+-- pasted text at the cursor in ANY mode, so every Normal-mode key lands in the
+-- buffer instead of running a command -- `<Space>sf` types "sf" rather than
+-- opening Telescope. It is not the keymap layer: `vim.paste({'sf'}, -1)` in
+-- Normal mode inserts "sf" too.
 --
--- Caveat worth knowing: this is a lookup table, not a real Telex engine, so the
--- tone goes immediately after its vowel rather than at the end of the syllable
--- --- `tieesng` gives `tiếng`, whereas `tieengs` gives `tiêngs`.
-vim.keymap.set('n', '<leader>tv', function()
-  vim.bo.keymap = vim.bo.keymap == 'vietnamese-telex' and '' or 'vietnamese-telex'
-  vim.notify('vietnamese telex ' .. (vim.bo.keymap == '' and 'off' or 'on'), vim.log.levels.INFO)
-end, { desc = '[T]oggle [V]ietnamese telex' })
+-- So switch the IME off on the way out of Insert and put it back on the way in.
+-- Normal mode then always sees raw keys, and Insert mode still gets the real
+-- Unikey engine with its usual Telex behaviour.
+--
+-- Guarded on ibus being present and a display being attached: over SSH the IME
+-- lives on the client and there is nothing here to switch, and WSL has no ibus.
+if vim.fn.executable 'ibus' == 1 and (vim.env.WAYLAND_DISPLAY or vim.env.DISPLAY) then
+  local IME_OFF = 'xkb:us::eng'
+  local saved_engine = nil
 
+  -- Async on purpose: `ibus engine` takes 16-40ms here, which is enough to be
+  -- felt on every <Esc> if it blocked the UI. The switch landing a few ms late
+  -- is harmless, since you are not typing at that instant.
+  local function ibus(args, on_done)
+    vim.system(vim.list_extend({ 'ibus' }, args), { text = true }, on_done)
+  end
+
+  local function ime_off()
+    ibus({ 'engine' }, function(res)
+      local current = vim.trim(res.stdout or '')
+      if current ~= '' and current ~= IME_OFF then
+        saved_engine = current
+        ibus { 'engine', IME_OFF }
+      end
+    end)
+  end
+
+  local function ime_restore()
+    if saved_engine then ibus { 'engine', saved_engine } end
+  end
+
+  local group = vim.api.nvim_create_augroup('ime-normal-mode', { clear = true })
+  -- Nvim starts in Normal mode, so the IME has to come off at startup too.
+  vim.api.nvim_create_autocmd({ 'VimEnter', 'InsertLeave' }, { group = group, callback = ime_off })
+  vim.api.nvim_create_autocmd('InsertEnter', { group = group, callback = ime_restore })
+  -- Leaving the IME switched off after quitting would break typing everywhere
+  -- else, so this one blocks -- nvim is exiting anyway.
+  vim.api.nvim_create_autocmd('VimLeavePre', {
+    group = group,
+    callback = function()
+      if saved_engine then vim.system({ 'ibus', 'engine', saved_engine }):wait() end
+    end,
+  })
+end
 -- Exit terminal mode in the builtin terminal with a shortcut that is a bit easier
 -- for people to discover. Otherwise, you normally need to press <C-\><C-n>, which
 -- is not what someone will guess without a bit more experience.
