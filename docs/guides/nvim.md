@@ -291,6 +291,37 @@ stranded on its own line. Two ways out:
 the better fix while reading, because render-markdown only pads and aligns -- it
 never re-wraps text inside a cell, and has no `max_width` to cap a runaway table.
 
+### Vietnamese input and Normal mode
+
+Nothing to configure -- this happens automatically on a desktop session, and is
+documented because the failure it prevents is baffling if you meet it cold.
+
+**The problem.** With a Vietnamese IME active, ibus composes your keystrokes and
+*commits* the result to the terminal, which forwards it as a **bracketed paste**.
+Nvim inserts pasted text at the cursor in **any** mode. So with the IME on, every
+Normal-mode key lands in the buffer instead of running a command: `<Space>sf`
+types `sf` rather than opening Telescope. It looks exactly like being stuck in
+Insert mode, and pressing `<Esc>` does not help, because you were never in Insert
+mode to begin with.
+
+It is not the keymap layer. `vim.paste({'sf'}, -1)` in Normal mode inserts `sf`
+just the same.
+
+**The fix.** `init.lua` switches the IME off on `InsertLeave` and restores it on
+`InsertEnter`, so Normal mode always sees raw keys while Insert mode still gets
+the real Unikey engine with its normal Telex behaviour. It also fires on
+`VimEnter` (nvim starts in Normal mode) and restores on `VimLeavePre`, since
+leaving the IME switched off would break typing everywhere else.
+
+Guarded on `ibus` being present *and* a display being attached, so it does
+nothing over SSH -- where the IME lives on the client -- or on WSL. Calls are
+async: `ibus engine` takes 16-40ms here, enough to feel on every `<Esc>` if it
+blocked.
+
+**One consequence worth knowing:** if you switch input source with `Super+Space`
+while in Normal mode, entering Insert restores whatever was active when you last
+left Insert, overriding that choice. Switch while *in* Insert mode instead.
+
 ---
 
 ## 10. Common workflows (what you'll actually do)
