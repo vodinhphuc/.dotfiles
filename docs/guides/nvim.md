@@ -353,6 +353,7 @@ left Insert, overriding that choice. Switch while *in* Insert mode instead.
 
 ```
 :Tutor              30-min interactive vim tutor (DO THIS once)
+:VimBeGood          practice motions as a timed game (hjkl, dd/x, ci{, relative jumps)
 :checkhealth        plugin / LSP / Mason status
 :help <topic>       built-in docs (try :help vim-tutor or :help motion)
 <Space>sh           Telescope through :help
@@ -382,11 +383,13 @@ left Insert, overriding that choice. Switch while *in* Insert mode instead.
 
 ---
 
-## 13. Two habits to build early
+## 13. Three habits to build early
 
 1. **Stay in Normal mode by default.** Drop into Insert (`i`) only when you're typing actual text. The moment you stop typing — `Esc`. Most of your time should be spent navigating in Normal.
 
-2. **When you find yourself reaching for the mouse or arrow keys, stop.** Look up the Normal-mode equivalent. The investment compounds. (The exception: scrolling docs / popups — mouse is fine, kickstart enables it.)
+2. **Drill the motions deliberately.** `:VimBeGood` gives you timed exercises (`hjkl`, `dd`/`x`, `ci{`, relative-line jumps). Ten minutes of it beats an hour of guessing. `q` quits back to your buffer.
+
+3. **When you find yourself reaching for the mouse or arrow keys, stop.** Look up the Normal-mode equivalent. The investment compounds. (The exception: scrolling docs / popups — mouse is fine, kickstart enables it.)
 
 ---
 

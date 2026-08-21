@@ -1145,6 +1145,15 @@ require('lazy').setup({
     end,
   },
 
+  { -- Drill motions/verbs as a game: :VimBeGood picks an exercise, you race it
+    'ThePrimeagen/vim-be-good',
+    -- Standalone Lua, no dependencies. Only pulled in when you actually play,
+    -- so it costs nothing at startup.
+    -- No keymap on purpose: this is a `:VimBeGood` you run deliberately, and the
+    -- existing <leader> groups are all Toggle/Search/Markdown/Git.
+    cmd = 'VimBeGood',
+  },
+
   -- The following comments only work if you have downloaded the kickstart repo, not just copy pasted the
   -- init.lua. If you want these files, they are in the repository, so you can just download them and
   -- place them in the correct locations.
