@@ -954,6 +954,44 @@ require('lazy').setup({
     },
   },
 
+  { -- IDE-style file tree in a docked side panel.
+    'nvim-neo-tree/neo-tree.nvim',
+    version = '*',
+    dependencies = {
+      'nvim-lua/plenary.nvim',
+      'nvim-tree/nvim-web-devicons',
+      'MunifTanjim/nui.nvim',
+    },
+    -- Loaded eagerly on purpose. Lazy-loading it would leave netrw in charge of
+    -- `nvim .` / `nvim <dir>`, so opening a directory would show netrw's listing
+    -- instead of the tree -- which is exactly when you most want the tree.
+    lazy = false,
+    keys = {
+      { '<leader>e', '<cmd>Neotree toggle<CR>', desc = 'File [E]xplorer (toggle)' },
+      { '\\', '<cmd>Neotree reveal<CR>', desc = 'File explorer (reveal current file)' },
+    },
+    opts = {
+      close_if_last_window = true, -- don't leave a bare tree behind after closing the last file
+      filesystem = {
+        -- This repo IS dotfiles: `.config/`, `.local/`, `.github/`. Neo-tree hides
+        -- dotfiles by default, which would render the tree here almost empty.
+        filtered_items = {
+          visible = true, -- show filtered names anyway, dimmed rather than gone
+          hide_dotfiles = false,
+          hide_gitignored = false,
+        },
+        follow_current_file = { enabled = true }, -- keep the tree in sync with the buffer
+        use_libuv_file_watcher = true, -- pick up files created outside nvim, no manual refresh
+        window = {
+          mappings = {
+            ['\\'] = 'close_window', -- same key in, same key out
+          },
+        },
+      },
+      window = { width = 32 },
+    },
+  },
+
   { -- The active colorscheme. Preview alternatives without editing this file:
     --   :Telescope colorscheme enable_preview=true
     -- To make a different one stick, change the `colorscheme` call at the bottom.

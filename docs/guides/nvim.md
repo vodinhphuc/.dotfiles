@@ -89,6 +89,7 @@ Top-level groups:
 <Space>h...     git Hunks
 <Space>q        quit / loclist
 <Space>f        format buffer
+<Space>e        file Explorer (neo-tree sidebar)
 ```
 
 The most-used ones day-to-day:
@@ -107,6 +108,7 @@ The most-used ones day-to-day:
 
 <Space>f        format buffer (conform.nvim → stylua/black/prettier/…)
 <Space>q        open diagnostics in location list
+<Space>e        toggle the file-tree sidebar
 ```
 
 Inside any Telescope picker:
@@ -197,10 +199,46 @@ Ctrl-w |  /  Ctrl-w _        max width / max height current split
 
 :bn / :bp / :bd              next / prev / delete buffer
 <Space><Space>               (kickstart) switch buffers via Telescope
-<Space>e                     explorer (kickstart wires netrw or mini.files)
+<Space>e                     toggle the neo-tree file sidebar
 ```
 
 Don't go straight to tabs — most users use buffers + splits and rarely need tabs.
+
+### The file sidebar (neo-tree)
+
+The docked tree on the left, like a normal IDE. It shows git status per file and
+follows whichever buffer you're in.
+
+```
+<Space>e        toggle the sidebar open/closed
+\               reveal the CURRENT file in the tree (and \ again to close)
+:Neotree        the full command (:Neotree git_status, :Neotree buffers, …)
+```
+
+Inside the tree:
+
+```
+Enter / o       open file (or expand/collapse a folder)
+s / S           open in vertical / horizontal split
+a               add a file  (end the name with `/` to make a directory instead)
+d  r  c  m      delete / rename / copy / move
+H               toggle hidden files
+R               refresh
+?               show every mapping — do this once
+```
+
+Two deliberate settings, both in the `neo-tree` spec in `init.lua`:
+
+- **Dotfiles are shown.** This repo *is* dotfiles (`.config/`, `.local/`), and
+  neo-tree hides them by default — the tree here would look nearly empty.
+  Gitignored files show too, dimmed.
+- **It loads at startup rather than lazily.** That's what lets `nvim .` or
+  `nvim some/dir` open the tree instead of netrw's plain listing. Cost is
+  negligible (total startup measured at ~27 ms).
+
+Worth knowing: once you're used to `<Space>sf` (fuzzy find) and `<Space>sg`
+(grep), you'll reach for the tree less than you'd expect. Its real strength is
+seeing the shape of a project you don't know yet.
 
 ---
 
