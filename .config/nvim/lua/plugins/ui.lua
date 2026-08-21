@@ -98,10 +98,16 @@ return {
       filesystem = {
         -- This repo IS dotfiles: `.config/`, `.local/`, `.github/`. Neo-tree hides
         -- dotfiles by default, which would render the tree here almost empty.
+        --
+        -- The fix is `visible`, NOT `hide_dotfiles = false`. `H` (toggle_hidden)
+        -- flips `visible`, and `visible` only governs items a filter actually
+        -- marked -- `hide_dotfiles = false` stops the marking altogether, so `H`
+        -- would toggle a flag matching nothing and look broken. Leave the filters
+        -- on: dotfiles still show at startup (dimmed), and `H` really hides them.
         filtered_items = {
-          visible = true, -- show filtered names anyway, dimmed rather than gone
-          hide_dotfiles = false,
-          hide_gitignored = false,
+          visible = true, -- filtered names show anyway, dimmed rather than gone
+          hide_dotfiles = true,
+          hide_gitignored = true,
         },
         follow_current_file = { enabled = true }, -- keep the tree in sync with the buffer
         use_libuv_file_watcher = true, -- pick up files created outside nvim, no manual refresh
