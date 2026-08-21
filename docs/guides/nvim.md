@@ -403,6 +403,41 @@ left Insert, overriding that choice. Switch while *in* Insert mode instead.
 :messages           recent messages/errors that scrolled past
 ```
 
+### Where the config lives
+
+`init.lua` used to be one 1,235-line file. It is now ~95 lines that bootstrap
+lazy.nvim and import everything else, so "where do I change X" has an answer:
+
+| Want to change | Edit |
+|---|---|
+| An option (`number`, `clipboard`, `scrolloff`, …) | `lua/config/options.lua` |
+| A standalone keymap (`<Esc>`, `<Space>q`, `<Space>tw`, `Ctrl-hjkl`) | `lua/config/keymaps.lua` |
+| How diagnostics are displayed | `lua/config/diagnostics.lua` |
+| Yank highlight, Vietnamese IME-by-mode | `lua/config/autocmds.lua` |
+| **Add a language server** | `lua/plugins/lsp.lua` — the `servers` table |
+| **Add a formatter** | `lua/plugins/format.lua` — `formatters_by_ft` |
+| **Add a treesitter parser** | `lua/plugins/treesitter.lua` — `ensure_installed` |
+| Every `<Space>s…` search key | `lua/plugins/telescope.lua` |
+| Completion / snippets | `lua/plugins/completion.lua` |
+| Sidebar, colorscheme, which-key | `lua/plugins/ui.lua` |
+| Git signs, TODO highlights, mini.nvim | `lua/plugins/editor.lua` |
+| `<Space>m…` markdown keys | `lua/plugins/markdown.lua` |
+
+**Adding a plugin is now one new file.** Drop `lua/plugins/whatever.lua` that
+returns a spec table and lazy.nvim picks it up — there is no list to register it
+in:
+
+```lua
+return {
+  { 'owner/repo', opts = {} },
+}
+```
+
+Note that keys belonging to a plugin are defined *in that plugin's* file, in its
+`keys = {}` block — not in `keymaps.lua`. `<Space>e` lives in `ui.lua` with
+neo-tree, `<Space>sf` in `telescope.lua`. `<Space>sk` (search keymaps) will tell
+you what a key does; this table tells you where to change it.
+
 ### Changing the colorscheme
 
 The active theme is **catppuccin-mocha**, set in one place — the `catppuccin/nvim`
