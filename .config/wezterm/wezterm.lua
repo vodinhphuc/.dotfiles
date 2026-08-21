@@ -60,10 +60,36 @@ local function random_background()
   return found[math.random(#found)]
 end
 
+-- Build the layer stack for one wallpaper.
+--
+-- The explicit `background` form is used instead of `window_background_image`
+-- because it *documents* what happens when a picture's aspect ratio does not
+-- match the window, where the simpler option leaves it unspecified:
+--   Cover     scale to fill the viewport, preserving ratio, cropping the excess
+--   NoRepeat  never tile -- tiling is what makes an odd-sized image look wrong
+--   Center    crop evenly from both edges rather than favouring one
+-- A 4:3 wallpaper among 16:9 ones is exactly the case this pins down.
+local function background_layers(image)
+  return {
+    -- Opaque base so no layer can ever leave a gap showing through to nothing.
+    -- Catppuccin Mocha's `base`, to match the colorscheme.
+    { source = { Color = '#1e1e2e' }, width = '100%', height = '100%' },
+    {
+      source = { File = image },
+      hsb = IMAGE_HSB,
+      width = 'Cover',
+      height = 'Cover',
+      repeat_x = 'NoRepeat',
+      repeat_y = 'NoRepeat',
+      horizontal_align = 'Center',
+      vertical_align = 'Middle',
+    },
+  }
+end
+
 local initial_bg = random_background()
 if initial_bg then
-  config.window_background_image = initial_bg
-  config.window_background_image_hsb = IMAGE_HSB
+  config.background = background_layers(initial_bg)
 else
   -- No wallpapers yet -- degrade to a plainly translucent window rather than
   -- shipping a half-configured image setup.
@@ -84,8 +110,7 @@ config.keys = {
         return
       end
       local overrides = window:get_config_overrides() or {}
-      overrides.window_background_image = image
-      overrides.window_background_image_hsb = IMAGE_HSB
+      overrides.background = background_layers(image)
       window:set_config_overrides(overrides)
     end),
   },
