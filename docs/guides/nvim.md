@@ -365,6 +365,22 @@ left Insert, overriding that choice. Switch while *in* Insert mode instead.
 :messages           recent messages/errors that scrolled past
 ```
 
+### Changing the colorscheme
+
+The active theme is **catppuccin-mocha**, set in one place — the `catppuccin/nvim`
+spec in `init.lua` (`flavour` + the `vim.cmd.colorscheme` call at the bottom of it).
+
+```
+:Telescope colorscheme enable_preview=true   preview every installed theme live (Esc cancels)
+:colorscheme catppuccin-latte                the light flavour; also -frappe, -macchiato
+:colorscheme tokyonight-night                the previous theme, kept installed for this
+```
+
+Those switches last until you restart. To make one permanent, edit the `colorscheme`
+line in the spec. For a theme that isn't installed yet, add its plugin with
+`priority = 1000` (so it loads before every other start plugin, otherwise the UI
+flashes in default colours first) and run `:Lazy sync`.
+
 ---
 
 ## 12. Troubleshooting
