@@ -130,6 +130,11 @@ return {
     config = function()
       require('catppuccin').setup {
         flavour = 'mocha', -- 'latte' is the light one; 'frappe'/'macchiato' sit between
+        -- Let the terminal show through instead of painting a solid background.
+        -- This is what makes the WezTerm/Terminator wallpaper visible behind code
+        -- (see .config/wezterm/wezterm.lua). Set to false to go back to a solid
+        -- Mocha base -- worth doing if a busy wallpaper hurts readability.
+        transparent_background = true,
         styles = {
           comments = {}, -- Disable italics in comments (catppuccin italicises by default)
         },
