@@ -21,7 +21,7 @@ ENVIRONMENT="${ENVIRONMENT:-native}"
 
 # Program scripts that only make sense on a native desktop. They stay visible
 # in the menu but start deselected on WSL (the user can still toggle them on).
-NATIVE_ONLY_PROGRAMS=" docker fan_control ibus_unikey nerd_font openrgb terminator visual_code "
+NATIVE_ONLY_PROGRAMS=" docker fan_control ibus_unikey nerd_font openrgb terminator visual_code wezterm "
 
 declare -a STEPS_OK=()
 declare -a STEPS_SKIP=()

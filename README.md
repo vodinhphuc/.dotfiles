@@ -180,7 +180,8 @@ bash scripts/install.sh
         ├── terminator.sh       # Terminator terminal emulator
         ├── tpm.sh              # Tmux Plugin Manager (auto-installs tmux plugins)
         ├── uv.sh               # uv + uvx (Python pkg manager) + zsh completions
-        └── visual_code.sh      # VS Code via snap
+        ├── visual_code.sh      # VS Code via snap
+        └── wezterm.sh          # WezTerm terminal (installed alongside Terminator)
 ```
 
 Dotfiles in the repo root are symlinked into `~/` by `stow .`. Adding a new dotfile is two steps: place it in the repo at the correct relative path, then run `stow .`.

@@ -437,6 +437,33 @@ assert_exit_zero "shellcheck.sh exits 0 when already installed" "$code"
 assert_output_contains "shellcheck.sh prints 'Already installed: shellcheck'" "Already installed: shellcheck" "$output"
 rm -f "$BIN_DIR/shellcheck"
 
+# --- wezterm.sh: skip every step when wezterm is already provisioned ---
+echo ""
+echo "=== wezterm.sh: skip when already installed ==="
+mock_cmd wezterm
+mock_sudo
+MOCK_HOME="$TEST_DIR/home_wezterm_skip"
+mkdir -p "$MOCK_HOME/.config/wezterm/bg"
+# wezterm mocked into PATH means the key/repo/install block is skipped whole --
+# which is also what keeps this test off the network.
+output=$(PATH="$BIN_DIR:$PATH" HOME="$MOCK_HOME" bash "$DOTFILES_DIR/scripts/programs/wezterm.sh" 2>&1)
+code=$?
+assert_exit_zero "wezterm.sh exits 0 when already installed" "$code"
+assert_output_contains "wezterm.sh prints 'Already installed: wezterm'" "Already installed: wezterm" "$output"
+assert_output_contains "wezterm.sh skips the bg folder when present" "Already installed: WezTerm background folder" "$output"
+assert_output_not_contains "wezterm.sh does not reinstall the package" "Installing WezTerm..." "$output"
+
+# --- wezterm.sh: creates the background folder when it is missing ---
+echo ""
+echo "=== wezterm.sh: creates background folder when absent ==="
+MOCK_HOME="$TEST_DIR/home_wezterm_bg"
+mkdir -p "$MOCK_HOME"   # no .config/wezterm/bg -- the script must create it
+output=$(PATH="$BIN_DIR:$PATH" HOME="$MOCK_HOME" bash "$DOTFILES_DIR/scripts/programs/wezterm.sh" 2>&1)
+code=$?
+assert_exit_zero "wezterm.sh exits 0 when creating bg folder" "$code"
+assert_dir_exists "wezterm.sh creates the bg folder" "$MOCK_HOME/.config/wezterm/bg"
+rm -f "$BIN_DIR/wezterm"
+
 # --- terminator.sh: should NOT say "Already installed" when terminator is absent ---
 echo ""
 echo "=== terminator.sh: does NOT say 'Already installed' when terminator is absent ==="
