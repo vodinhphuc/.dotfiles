@@ -25,6 +25,10 @@ bash scripts/programs/<name>.sh
 bash scripts/test_programs.sh
 bash scripts/test_orchestrator.sh
 
+# Run only the suites you care about (much faster while iterating on one script)
+bash scripts/test_programs.sh wezterm terminator
+bash scripts/tests/test_wezterm.sh          # or run one suite directly
+
 # Lint every script directly (must be clean before committing)
 shellcheck -x scripts/*.sh scripts/programs/*.sh
 ```
@@ -110,7 +114,11 @@ Read/write wrapper over the raw hwmon `pwm` sysfs files (stowed onto `PATH`), co
 
 ## How to extend
 
-**Add a program:** Create `scripts/programs/<name>.sh` with an idempotency guard. It is picked up automatically by `install.sh`. Add a matching test case to `scripts/test_programs.sh`, and make sure it passes `shellcheck -x` (the test suite enforces this).
+**Add a program:** Create `scripts/programs/<name>.sh` with an idempotency guard. It is picked up automatically by `install.sh`. Add `scripts/tests/test_<name>.sh` (copy any existing one — source `lib/assertions.sh` and `lib/mocks.sh`, end with `finish_suite "<name>.sh"`); the runner discovers it automatically, nothing to register. Make sure it passes `shellcheck -x` — `test_lint.sh` enforces this over `scripts/`, `scripts/programs/`, `scripts/tests/` and `.local/bin/`.
+
+### `scripts/tests/`
+
+One suite per program, mirroring `scripts/programs/`, plus the three `.local/bin` CLI suites and `test_lint.sh` (syntax + shellcheck over every script). Split out of an 833-line `test_programs.sh` on 2026-08-23; that file is now a ~60-line runner that globs `scripts/tests/test_*.sh`, runs each in its own process, and totals the results. Shared helpers live in `lib/assertions.sh` (every `assert_*`, plus `finish_suite`) and `lib/mocks.sh` (`TEST_DIR`/`BIN_DIR` fixture, `mock_cmd`, `mock_sudo`, `mock_logging_cmds`, `mock_dpkg_query_all_installed`). Suites communicate their tally to the runner through `$TEST_RESULT_FILE` rather than by having their output scraped, and each is independently executable. The split was verified by diffing the full list of assertion descriptions before and after: nothing lost, and 22 files gained lint coverage they never had.
 
 **Add a dotfile:** Place the config file in the repo root at the path it should have relative to `~/`, then run `stow .`.
 

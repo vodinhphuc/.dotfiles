@@ -3,10 +3,11 @@
 # Standalone (like test_rgb_cli.sh) so it can be run directly.
 set -uo pipefail
 
-DOTFILES_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+TESTS_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+DOTFILES_DIR="$(cd "$TESTS_DIR/../.." && pwd)"
+# shellcheck source=scripts/tests/lib/assertions.sh
+source "$TESTS_DIR/lib/assertions.sh"
 WP="$DOTFILES_DIR/.local/bin/wallpaper"
-PASS=0
-FAIL=0
 
 assert_exit_zero() {
     local desc="$1" code="$2"
@@ -150,6 +151,4 @@ assert_exit_zero "help exits 0" "$code"
 output="$(run_wp bogus-command)"; code=$?
 assert_exit_nonzero "an unknown command exits non-zero" "$code"
 
-echo ""
-echo "  wallpaper CLI: $PASS passed, $FAIL failed"
-[ "$FAIL" -eq 0 ]
+finish_suite "wallpaper CLI"

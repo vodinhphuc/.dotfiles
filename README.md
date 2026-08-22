@@ -168,8 +168,11 @@ bash scripts/install.sh
 └── scripts/
     ├── install.sh              # orchestrator
     ├── test_orchestrator.sh    # tests for install.sh logic
-    ├── test_programs.sh        # idempotency tests for program scripts
-    ├── test_wallpaper_cli.sh   # unit tests for the wallpaper CLI
+    ├── test_programs.sh        # runner: runs everything in tests/
+    ├── tests/                  # one suite per program + shared helpers
+    │   ├── lib/                # assertions.sh, mocks.sh
+    │   ├── test_lint.sh        # syntax + shellcheck over every script
+    │   └── test_<program>.sh   # …one per scripts/programs/<program>.sh
     └── programs/
         ├── custome_zsh.sh      # oh-my-zsh, antigen, powerlevel10k
         ├── docker.sh           # Docker via snap

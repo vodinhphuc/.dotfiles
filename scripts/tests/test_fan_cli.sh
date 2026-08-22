@@ -4,10 +4,11 @@
 # keep this file standalone so it can also be run directly.
 set -uo pipefail
 
-DOTFILES_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+TESTS_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+DOTFILES_DIR="$(cd "$TESTS_DIR/../.." && pwd)"
+# shellcheck source=scripts/tests/lib/assertions.sh
+source "$TESTS_DIR/lib/assertions.sh"
 FAN="$DOTFILES_DIR/.local/bin/fan"
-PASS=0
-FAIL=0
 
 assert_exit_zero() {
     local desc="$1" code="$2"
@@ -160,8 +161,5 @@ assert_exit_nonzero "fan status exits non-zero on empty tree" "$code"
 assert_output_contains "fan status references the guide" "docs/guides/fans.md" "$output"
 
 # --- summary ---
-echo ""
-echo "=========================================="
-echo "  fan CLI: $PASS passed, $FAIL failed"
-echo "=========================================="
-[ "$FAIL" -eq 0 ] || exit 1
+
+finish_suite "fan CLI"

@@ -3,10 +3,11 @@
 # Standalone (like test_fan_cli.sh) so it can be run directly.
 set -uo pipefail
 
-DOTFILES_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+TESTS_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+DOTFILES_DIR="$(cd "$TESTS_DIR/../.." && pwd)"
+# shellcheck source=scripts/tests/lib/assertions.sh
+source "$TESTS_DIR/lib/assertions.sh"
 RGB="$DOTFILES_DIR/.local/bin/rgb"
-PASS=0
-FAIL=0
 
 assert_exit_zero() {
     local desc="$1" code="$2"
@@ -149,8 +150,5 @@ output=$(run_rgb persist bogus); code=$?
 assert_exit_nonzero "rgb persist with bad arg fails" "$code"
 
 # --- summary ---
-echo ""
-echo "=========================================="
-echo "  rgb CLI: $PASS passed, $FAIL failed"
-echo "=========================================="
-[ "$FAIL" -eq 0 ] || exit 1
+
+finish_suite "rgb CLI"
