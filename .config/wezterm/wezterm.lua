@@ -5,6 +5,7 @@
 -- Ctrl+Alt+T. Drop wallpapers into ~/.config/wezterm/bg to get backgrounds.
 
 local wezterm = require 'wezterm'
+local mux = wezterm.mux
 local config = wezterm.config_builder()
 
 -- ---------------------------------------------------------------------------
@@ -29,6 +30,30 @@ config.font_size = 12.0
 -- tmux already supplies tabs and a status line, so WezTerm's own tab bar is
 -- mostly redundant on this machine -- keep it only when it says something.
 config.hide_tab_bar_if_only_one_tab = true
+
+-- No title bar, to give the terminal the whole window.
+--
+-- 'RESIZE' rather than 'NONE': the two differ only by the invisible resize
+-- border, and the WezTerm docs are explicit that dropping RESIZE breaks
+-- resizing and minimising. Note that on Wayland the compositor is still free to
+-- impose its own decorations, so treat this as a request, not a guarantee.
+-- With no title bar to grab, drag the window with SUPER held down.
+config.window_decorations = 'RESIZE'
+
+-- Fill the screen on launch.
+--
+-- `maximize()` is used instead of `toggle_fullscreen()` deliberately: combined
+-- with the borderless setting above it already yields the entire screen minus
+-- GNOME's top bar, while leaving the clock, tray and a normal Alt-Tab intact.
+-- True fullscreen hides those too -- press F11 (bound below) when you want it,
+-- or swap the call here to make it the default.
+--
+-- `cmd or {}` matters: without it, `wezterm start -- htop` would silently drop
+-- the program and just open a shell.
+wezterm.on('gui-startup', function(cmd)
+  local _, _, window = mux.spawn_window(cmd or {})
+  window:gui_window():maximize()
+end)
 config.scrollback_lines = 10000
 config.window_close_confirmation = 'NeverPrompt'
 config.window_padding = { left = 8, right = 8, top = 8, bottom = 8 }
@@ -100,6 +125,9 @@ end
 -- Keys
 -- ---------------------------------------------------------------------------
 config.keys = {
+  -- True fullscreen on demand -- also on WezTerm's built-in ALT+ENTER, but F11
+  -- is what every other application on this desktop uses.
+  { key = 'F11', action = wezterm.action.ToggleFullScreen },
   {
     key = 'b',
     mods = 'CTRL|SHIFT',

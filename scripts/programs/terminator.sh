@@ -31,8 +31,9 @@ cat > "${HOME}/.config/terminator/config" << 'EOF'
 EOF
 echo "Terminator config written."
 
-# Set terminator as default terminal (Ctrl+Alt+T)
+# Register Terminator as an x-terminal-emulator option, but do NOT claim the
+# default: wezterm.sh sets itself as the default (Ctrl+Alt+T) at priority 60,
+# and if both scripts forced the setting the winner would come down to the order
+# install.sh happens to run them in. Registering without --set keeps Terminator
+# one `update-alternatives --config x-terminal-emulator` away.
 sudo update-alternatives --install /usr/bin/x-terminal-emulator x-terminal-emulator /usr/bin/terminator 50
-sudo update-alternatives --set x-terminal-emulator /usr/bin/terminator
-gsettings set org.gnome.desktop.default-applications.terminal exec /usr/bin/terminator
-gsettings set org.gnome.desktop.default-applications.terminal exec-arg "-x"
