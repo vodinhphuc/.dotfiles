@@ -673,6 +673,17 @@ else
     FAIL=$((FAIL + 1))
 fi
 
+# --- wallpaper CLI ---
+echo ""
+echo "=== wallpaper CLI ==="
+if bash "$DOTFILES_DIR/scripts/test_wallpaper_cli.sh"; then
+    echo "  PASS: wallpaper CLI suite"
+    PASS=$((PASS + 1))
+else
+    echo "  FAIL: wallpaper CLI suite"
+    FAIL=$((FAIL + 1))
+fi
+
 # --- Syntax checks ---
 echo ""
 echo "=== Syntax checks ==="

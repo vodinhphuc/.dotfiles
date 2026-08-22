@@ -1,0 +1,199 @@
+#!/bin/bash
+set -euo pipefail
+
+# wallpaper — keep the WezTerm background folder at the screen's resolution.
+# Companion to .config/wezterm/wezterm.lua and scripts/programs/wezterm.sh.
+#
+# The Lua config already renders ANY aspect ratio correctly (Cover + Center +
+# NoRepeat), so this is not about how images look -- it is about how big they
+# are. An oversized JPEG has to be decoded and pushed to the GPU every time
+# CTRL+SHIFT+b switches wallpaper, which is what makes the window blink, and it
+# bloats the dotfiles repo since these images are committed.
+
+WALLPAPER_DIR="${WALLPAPER_DIR:-$HOME/.config/wezterm/bg}"
+WALLPAPER_BACKUP_DIR="${WALLPAPER_BACKUP_DIR:-$HOME/Downloads/wezterm-bg-originals}"
+WALLPAPER_DRY_RUN="${WALLPAPER_DRY_RUN:-0}"
+WALLPAPER_QUALITY="${WALLPAPER_QUALITY:-88}"
+
+# ImageMagick 7 ships a single `magick`; 6 splits it into `identify`/`convert`.
+MAGICK_BIN="${WALLPAPER_MAGICK:-magick}"
+if command -v "$MAGICK_BIN" &>/dev/null; then
+    IDENTIFY=("$MAGICK_BIN" identify)
+    CONVERT=("$MAGICK_BIN")
+else
+    IDENTIFY=(identify)
+    CONVERT=(convert)
+fi
+
+usage() {
+    cat <<'EOF'
+Usage: wallpaper <command>
+
+Commands:
+  list                 Show every wallpaper with its size and whether it needs work
+  check                Exit non-zero if any wallpaper is not at the target size
+  normalize            Resize the ones that need it (originals are backed up first)
+  help, -h, --help     Show this help
+
+Only images that are NOT already at the target resolution are touched, so
+running normalize twice is a no-op. Formats are preserved -- a PNG stays a PNG
+rather than being silently re-encoded as JPEG.
+
+Environment:
+  WALLPAPER_DIR          folder to manage (default: ~/.config/wezterm/bg)
+  WALLPAPER_WIDTH        target width  (default: detected screen width, else 1920)
+  WALLPAPER_HEIGHT       target height (default: detected screen height, else 1080)
+  WALLPAPER_BACKUP_DIR   where originals go (default: ~/Downloads/wezterm-bg-originals)
+  WALLPAPER_DRY_RUN=1    report what would change without touching anything
+  WALLPAPER_QUALITY      JPEG quality for resizes (default: 88)
+  WALLPAPER_MAGICK       ImageMagick binary (default: magick)
+EOF
+}
+
+# --- target resolution ------------------------------------------------------
+
+# Explicit env wins; otherwise ask the display; otherwise assume 1080p. xrandr
+# works under XWayland too, which is why it is preferred over a Wayland-only
+# tool -- but it is absent on a headless box, hence the fallback.
+detect_target() {
+    local mode=""
+    if [ -n "${WALLPAPER_WIDTH:-}" ] && [ -n "${WALLPAPER_HEIGHT:-}" ]; then
+        TARGET_W="$WALLPAPER_WIDTH"
+        TARGET_H="$WALLPAPER_HEIGHT"
+        return
+    fi
+    if command -v xrandr &>/dev/null; then
+        mode="$(xrandr 2>/dev/null | awk '/\*/ {print $1; exit}')"
+    fi
+    if [[ "$mode" =~ ^([0-9]+)x([0-9]+)$ ]]; then
+        TARGET_W="${BASH_REMATCH[1]}"
+        TARGET_H="${BASH_REMATCH[2]}"
+    else
+        TARGET_W=1920
+        TARGET_H=1080
+    fi
+}
+
+# --- image helpers ----------------------------------------------------------
+
+images() {
+    find "$WALLPAPER_DIR" -maxdepth 1 -type f \
+        \( -iname '*.jpg' -o -iname '*.jpeg' -o -iname '*.png' -o -iname '*.gif' \) \
+        2>/dev/null | sort
+}
+
+dims() {
+    "${IDENTIFY[@]}" -format '%w %h' "$1[0]" 2>/dev/null || echo "0 0"
+}
+
+human() {
+    numfmt --to=iec "$1" 2>/dev/null || echo "$1"
+}
+
+# --- commands ---------------------------------------------------------------
+
+cmd_list() {
+    detect_target
+    local found=0 file name w h bytes status
+    echo "Target: ${TARGET_W}x${TARGET_H}  (dir: $WALLPAPER_DIR)"
+    echo ""
+    while IFS= read -r file; do
+        [ -n "$file" ] || continue
+        found=1
+        name="$(basename "$file")"
+        read -r w h <<<"$(dims "$file")"
+        bytes="$(stat -c%s "$file")"
+        if [ "$w" = "$TARGET_W" ] && [ "$h" = "$TARGET_H" ]; then
+            status="ok"
+        else
+            status="needs resize"
+        fi
+        printf '%-42s %5sx%-5s %8s  %s\n' "$name" "$w" "$h" "$(human "$bytes")" "$status"
+    done < <(images)
+    if [ "$found" -eq 0 ]; then
+        echo "No images in $WALLPAPER_DIR"
+    fi
+}
+
+# Count images that are not already at the target size.
+pending_count() {
+    local file w h n=0
+    while IFS= read -r file; do
+        [ -n "$file" ] || continue
+        read -r w h <<<"$(dims "$file")"
+        if [ "$w" != "$TARGET_W" ] || [ "$h" != "$TARGET_H" ]; then
+            n=$((n + 1))
+        fi
+    done < <(images)
+    echo "$n"
+}
+
+cmd_check() {
+    detect_target
+    local n
+    n="$(pending_count)"
+    if [ "$n" -eq 0 ]; then
+        echo "All wallpapers are ${TARGET_W}x${TARGET_H}."
+        return 0
+    fi
+    echo "$n wallpaper(s) not at ${TARGET_W}x${TARGET_H}. Run: wallpaper normalize" >&2
+    return 1
+}
+
+cmd_normalize() {
+    detect_target
+    local file name w h before after done_n=0 skip_n=0
+    while IFS= read -r file; do
+        [ -n "$file" ] || continue
+        name="$(basename "$file")"
+        read -r w h <<<"$(dims "$file")"
+        if [ "$w" = "$TARGET_W" ] && [ "$h" = "$TARGET_H" ]; then
+            skip_n=$((skip_n + 1))
+            continue
+        fi
+        before="$(stat -c%s "$file")"
+        if [ "$WALLPAPER_DRY_RUN" = "1" ]; then
+            printf '%-42s %sx%s -> %sx%s  (dry run)\n' \
+                "$name" "$w" "$h" "$TARGET_W" "$TARGET_H"
+            done_n=$((done_n + 1))
+            continue
+        fi
+        # Keep the original outside the repo: committing it first would leave the
+        # full-size blob in git history forever, defeating the point of resizing.
+        mkdir -p "$WALLPAPER_BACKUP_DIR"
+        cp -n "$file" "$WALLPAPER_BACKUP_DIR/$name" 2>/dev/null || true
+        # ^ resize-to-fill, then crop the overflow from the centre: the same
+        # geometry the Lua config's Cover+Center does at draw time, baked in.
+        "${CONVERT[@]}" "$file" -resize "${TARGET_W}x${TARGET_H}^" \
+            -gravity center -extent "${TARGET_W}x${TARGET_H}" \
+            -quality "$WALLPAPER_QUALITY" "$file.tmp"
+        mv "$file.tmp" "$file"
+        after="$(stat -c%s "$file")"
+        printf '%-42s %sx%s -> %sx%s  (%s -> %s)\n' \
+            "$name" "$w" "$h" "$TARGET_W" "$TARGET_H" "$(human "$before")" "$(human "$after")"
+        done_n=$((done_n + 1))
+    done < <(images)
+    echo ""
+    if [ "$WALLPAPER_DRY_RUN" = "1" ]; then
+        echo "$done_n would be normalized, $skip_n already ok."
+    else
+        echo "$done_n normalized, $skip_n already ok."
+    fi
+    if [ "$done_n" -gt 0 ] && [ "$WALLPAPER_DRY_RUN" != "1" ]; then
+        echo "Originals: $WALLPAPER_BACKUP_DIR"
+    fi
+}
+
+main() {
+    local cmd="${1:-help}"
+    shift || true
+    case "$cmd" in
+        help|-h|--help) usage ;;
+        list)           cmd_list ;;
+        check)          cmd_check ;;
+        normalize)      cmd_normalize ;;
+        *)              usage; exit 1 ;;
+    esac
+}
+
+main "$@"

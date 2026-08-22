@@ -169,6 +169,7 @@ bash scripts/install.sh
     ├── install.sh              # orchestrator
     ├── test_orchestrator.sh    # tests for install.sh logic
     ├── test_programs.sh        # idempotency tests for program scripts
+    ├── test_wallpaper_cli.sh   # unit tests for the wallpaper CLI
     └── programs/
         ├── custome_zsh.sh      # oh-my-zsh, antigen, powerlevel10k
         ├── docker.sh           # Docker via snap
