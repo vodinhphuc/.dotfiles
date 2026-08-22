@@ -75,7 +75,7 @@ Current scripts:
 
 | `shellcheck.sh` | shellcheck (static analysis linter for the repo's shell scripts) |
 
-| `terminator.sh` | Terminator. **Registers** itself as an `x-terminal-emulator` alternative (priority 50) but no longer claims the default — `wezterm.sh` does, at 60. Two scripts both forcing it would make the winner depend on `install.sh` ordering. Switch back with `update-alternatives --config x-terminal-emulator`. Caveat: this script rewrites `~/.config/terminator/config` unconditionally, so any background/font set through Terminator's GUI is lost on the next run |
+| `terminator.sh` | Terminator. **Registers** itself as an `x-terminal-emulator` alternative (priority 50) but no longer claims the default — `wezterm.sh` does, at 60. Two scripts both forcing it would make the winner depend on `install.sh` ordering. Switch back with `update-alternatives --config x-terminal-emulator`. Seeds `~/.config/terminator/config` **only when absent** — it used to `cat >` unconditionally (mislabelled "idempotent"), destroying anything set through Terminator's own preferences GUI on every `install.sh` run; delete the file to get the template back |
 | `tpm.sh` | Tmux Plugin Manager |
 | `ttyd.sh` | ttyd web terminal as a systemd **user** service, bound to `tailscale0` (never `0.0.0.0`), attaching `tmux new -A -s dotfile`. Exists so Vietnamese can be typed from a tablet: Android terminal apps disable the keyboard's composing region, browsers do not. Hooks: `TTYD_PORT`/`TTYD_INTERFACE`/`TTYD_TMUX_SESSION`/`TTYD_CONFIG_DIR`/`TTYD_SYSTEMD_USER_DIR`, plus `TTYD_FORCE_PKG_INSTALLED`/`TTYD_SKIP_SYSTEMCTL` for tests. Reference: `docs/guides/ttyd.md` |
 | `uv.sh` | uv + uvx (Python pkg/project manager), pre-generates zsh completions to `~/.config/uv` |

@@ -504,6 +504,24 @@ code=$?
 assert_exit_zero "terminator.sh exits 0 when terminator already installed" "$code"
 assert_file_exists "terminator config is written" "$MOCK_HOME/.config/terminator/config"
 
+# --- terminator.sh: must NOT clobber an existing config ---
+# Regression guard: this script used to `cat >` the config unconditionally,
+# wiping whatever Terminator's own preferences GUI had written (background
+# image, font) on every install.sh run.
+echo ""
+echo "=== terminator.sh: preserves an existing config ==="
+MOCK_HOME="$TEST_DIR/home_term_existing"
+mkdir -p "$MOCK_HOME/.config/terminator"
+printf '[profiles]\n[[default]]\n  background_image = /my/wallpaper.jpg\n' \
+    > "$MOCK_HOME/.config/terminator/config"
+output=$(PATH="$BIN_DIR:$PATH" HOME="$MOCK_HOME" bash "$DOTFILES_DIR/scripts/programs/terminator.sh" 2>&1)
+code=$?
+assert_exit_zero "terminator.sh exits 0 with an existing config" "$code"
+assert_output_contains "terminator.sh says it left the config alone" "Already installed: Terminator config" "$output"
+assert_file_contains "terminator.sh preserves the user's background_image" \
+    "$MOCK_HOME/.config/terminator/config" "background_image = /my/wallpaper.jpg"
+assert_output_not_contains "terminator.sh does not rewrite the config" "Terminator config written" "$output"
+
 # --- custome_zsh.sh: skips all components when already present ---
 echo ""
 echo "=== custome_zsh.sh: skip all components when already installed ==="

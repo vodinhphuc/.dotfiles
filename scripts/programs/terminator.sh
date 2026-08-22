@@ -6,9 +6,19 @@ if ! command -v terminator &>/dev/null; then
     sudo apt-get install -y terminator
 fi
 
-# Always write/update config (idempotent)
-mkdir -p "${HOME}/.config/terminator"
-cat > "${HOME}/.config/terminator/config" << 'EOF'
+# Seed a starter config ONLY when there isn't one.
+#
+# This used to be an unconditional `cat >`, described as "idempotent" -- it was
+# not. Terminator's preferences GUI writes to this same file, so every
+# install.sh run silently destroyed whatever had been set there (background
+# image, font, profiles) and reset it to this bare template. Anything the user
+# has customised now wins; delete the file to get the template back.
+TERMINATOR_CONFIG="${HOME}/.config/terminator/config"
+mkdir -p "$(dirname "$TERMINATOR_CONFIG")"
+if [ -f "$TERMINATOR_CONFIG" ]; then
+    echo "Already installed: Terminator config (leaving your settings alone)"
+else
+cat > "$TERMINATOR_CONFIG" << 'EOF'
 [global_config]
 
 [keybindings]
@@ -30,6 +40,7 @@ cat > "${HOME}/.config/terminator/config" << 'EOF'
 [plugins]
 EOF
 echo "Terminator config written."
+fi
 
 # Register Terminator as an x-terminal-emulator option, but do NOT claim the
 # default: wezterm.sh sets itself as the default (Ctrl+Alt+T) at priority 60,

@@ -54,6 +54,30 @@ wezterm.on('gui-startup', function(cmd)
   local _, _, window = mux.spawn_window(cmd or {})
   window:gui_window():maximize()
 end)
+
+-- ...and every window after the first.
+--
+-- `gui-startup` fires once, when the GUI *process* starts. Ctrl+Alt+T asks the
+-- already-running wezterm to open a window instead of starting a new process,
+-- so the handler above never runs for it and window two onwards opened at the
+-- default size. `window-config-reloaded` does fire for each newly spawned
+-- window (upstream wezterm#3173), which is what makes this work.
+--
+-- The seen-set is load-bearing, not defensive: this same event also fires on
+-- every `window:set_config_overrides()` call -- which is exactly what
+-- CTRL+SHIFT+b does -- so without it, changing wallpaper would yank a window
+-- you had deliberately un-maximized back to full size. Keys must be strings;
+-- wezterm.GLOBAL round-trips through a serialised form where integer keys do
+-- not survive.
+wezterm.on('window-config-reloaded', function(window)
+  local id = tostring(window:window_id())
+  local seen = wezterm.GLOBAL.seen_windows or {}
+  if not seen[id] then
+    seen[id] = true
+    wezterm.GLOBAL.seen_windows = seen
+    window:maximize()
+  end
+end)
 config.scrollback_lines = 10000
 config.window_close_confirmation = 'NeverPrompt'
 config.window_padding = { left = 8, right = 8, top = 8, bottom = 8 }
