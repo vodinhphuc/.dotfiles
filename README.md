@@ -13,6 +13,7 @@ Automated Ubuntu desktop environment setup using [GNU Stow](https://www.gnu.org/
 | Python | Miniconda3, uv (Astral package/project manager + uvx) |
 | Multiplexer | tmux (prefix `Ctrl-q`) + TPM with catppuccin / tmux-yank / tmux-sensible plugins |
 | Markdown / source reading | glow (Charm apt repo), bat (apt; aliased from `batcat`) |
+| Fuzzy finding | fzf (apt) — `Ctrl-T` files, `Ctrl-R` history, `Alt-C` cd, `**`+`Tab` completion; backed by fd, previews via bat |
 | Input method | ibus + ibus-unikey (Vietnamese input) |
 | Neovim runtime deps | ripgrep, fd-find, nodejs, npm, tree-sitter-cli, build-essential, xclip |
 | Utilities | curl, git, htop, tree, wget, nvtop |
@@ -177,6 +178,7 @@ bash scripts/install.sh
         ├── custome_zsh.sh      # oh-my-zsh, antigen, powerlevel10k
         ├── docker.sh           # Docker via snap
         ├── fan_control.sh      # lm-sensors + fancontrol (nct6775 module)
+        ├── fzf.sh              # fzf + fd-find + zsh key bindings/completion
         ├── glow.sh             # glow + bat (markdown + syntax-highlighted reading)
         ├── ibus_unikey.sh      # ibus + Vietnamese input setup
         ├── miniconda.sh        # Miniconda3
