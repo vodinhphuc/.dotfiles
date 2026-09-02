@@ -138,7 +138,27 @@ return {
 
         -- Local additions (vendored kickstart customization):
         bashls = {},
-        pyright = {},
+        -- pyright takes its interpreter from PATH, so a project whose deps live
+        -- in a local venv shows every import as unresolved -- `import dlt`
+        -- erroring on a file that runs fine -- because PATH leads with conda or
+        -- the system python instead. Exporting VIRTUAL_ENV does not help;
+        -- pyright reads only the interpreter path. Point it at the project's own
+        -- venv when there is one, and leave pyright's PATH lookup alone when
+        -- there is not (so non-venv projects behave exactly as before).
+        pyright = {
+          before_init = function(_, config)
+            local root = config.root_dir or vim.fn.getcwd()
+            for _, dir in ipairs { '.venv', 'venv' } do
+              local python = root .. '/' .. dir .. '/bin/python'
+              if vim.uv.fs_stat(python) then
+                config.settings = vim.tbl_deep_extend('force', config.settings or {}, {
+                  python = { pythonPath = python },
+                })
+                break
+              end
+            end
+          end,
+        },
         gopls = {},
         ts_ls = {},
 
