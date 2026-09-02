@@ -145,15 +145,22 @@ return {
         -- pyright reads only the interpreter path. Point it at the project's own
         -- venv when there is one, and leave pyright's PATH lookup alone when
         -- there is not (so non-venv projects behave exactly as before).
+        --
+        -- This must be `on_init`, not `before_init`: by the time before_init runs
+        -- nvim has already captured `config.settings` onto the client, so mutating
+        -- config there leaves client.settings nil and the server never hears about
+        -- it. on_init can set client.settings and push it with an explicit
+        -- didChangeConfiguration.
         pyright = {
-          before_init = function(_, config)
-            local root = config.root_dir or vim.fn.getcwd()
+          on_init = function(client)
+            local root = client.config.root_dir or vim.fn.getcwd()
             for _, dir in ipairs { '.venv', 'venv' } do
               local python = root .. '/' .. dir .. '/bin/python'
               if vim.uv.fs_stat(python) then
-                config.settings = vim.tbl_deep_extend('force', config.settings or {}, {
+                client.settings = vim.tbl_deep_extend('force', client.settings or {}, {
                   python = { pythonPath = python },
                 })
+                client:notify('workspace/didChangeConfiguration', { settings = client.settings })
                 break
               end
             end
