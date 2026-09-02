@@ -65,7 +65,7 @@ Current scripts:
 | Script | Installs |
 |---|---|
 | `custome_zsh.sh` | oh-my-zsh, antigen, powerlevel10k, conda-zsh-completion |
-| `docker.sh` | Docker (snap), adds user to `docker` group |
+| `docker.sh` | Docker Engine + compose/buildx plugins from Docker's **official apt repo**, adds user to `docker` group. Switched off the snap on 2026-09-02: the snap is strictly confined — it connects the `home` interface but not `removable-media`, so containers can bind-mount only from `~/`, and its image store cannot be moved off `/`. Neither is configurable, which rules it out for anything holding real volume data. **Refuses to run while the docker snap is installed** (a snap satisfies `command -v docker`, so it would otherwise report success and leave the confined version in place) and prints the removal command. Hooks: `DOCKER_APT_LIST`/`DOCKER_KEYRING` |
 | `fan_control.sh` | lm-sensors + fancontrol, persists `nct6775` kernel module |
 | `fzf.sh` | fzf (apt) + fd-find; pre-generates the zsh integration (Ctrl-T / Ctrl-R / Alt-C / `**` completion) to `~/.config/fzf/fzf.zsh`, sourced from `.zshrc`. Regenerated on every run so it tracks fzf across upgrades, but written via an atomic rename so a failed regeneration leaves the working file intact. Falls back to Debian's `/usr/share/doc/fzf/examples` snippets when `fzf --zsh` is unsupported (fzf < 0.48). Hooks: `FZF_CONFIG_DIR`/`FZF_EXAMPLES_DIR` |
 | `gh.sh` | GitHub CLI (`gh`) from GitHub's official apt repo |

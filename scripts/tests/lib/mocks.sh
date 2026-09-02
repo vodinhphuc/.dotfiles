@@ -19,6 +19,14 @@ mock_cmd() {
     chmod +x "$BIN_DIR/$1"
 }
 
+# Creates a fake binary that always fails (exit 1). Useful for representing a
+# command that exists but whose subcommand should report "not found" -- e.g.
+# `snap list docker` on a machine with no docker snap.
+mock_failing_cmd() {
+    printf '#!/bin/bash\nexit 1\n' > "$BIN_DIR/$1"
+    chmod +x "$BIN_DIR/$1"
+}
+
 # Creates a fake sudo that just runs the rest of the command as current user
 mock_sudo() {
     printf '#!/bin/bash\n"$@"\n' > "$BIN_DIR/sudo"
