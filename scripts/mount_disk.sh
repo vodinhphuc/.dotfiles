@@ -12,7 +12,9 @@
 #     mishandling them.
 #   - Identifies disks by UUID (stable across reboots), never by /dev names.
 #   - Backs up /etc/fstab before editing; uses `nofail` +
-#     `x-systemd.device-timeout` so a missing disk can never block boot.
+#     `x-systemd.device-timeout` so a missing disk can never block boot, and
+#     `x-gvfs-show` so the mount appears in the Nautilus sidebar (an fstab
+#     entry is otherwise classified "system internal" and hidden from GNOME).
 #   - Validates and test-mounts before trusting anything; rolls back the
 #     fstab change on any failure.
 #
@@ -274,7 +276,7 @@ MODE="rw"
 if confirm "Mount READ-ONLY (safer; you cannot write to it)?"; then MODE="ro"; fi
 
 # Build mount options for the FINAL filesystem type.
-BASE_OPTS="nofail,x-systemd.device-timeout=10"
+BASE_OPTS="nofail,x-systemd.device-timeout=10,x-gvfs-show"
 PASS=0
 CHOWN=0
 case "$TYPE" in
