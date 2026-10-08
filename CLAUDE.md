@@ -46,7 +46,7 @@ Orchestrator. Runs once on a fresh machine (or resumes after failure):
 1. Parse flags (`--all`/`-a` to skip the menu, `--native`/`--wsl` to force the target, `--help`/`-h`)
 2. Disable the install-media (`cdrom`) apt source so `apt update` can't break
 3. Resolve the install **target**: `detect_environment` returns `wsl` (when `$WSL_DISTRO_NAME` is set or `/proc/version` mentions microsoft) or `native`. `--native`/`--wsl` override; otherwise `choose_environment` prompts interactively. Sets `ENVIRONMENT`.
-4. `build_plan` discovers the two phases (`system update`, `base packages`) plus one entry per `scripts/programs/*.sh`. Defaults respect the target: programs in `NATIVE_ONLY_PROGRAMS` (`docker fan_control ibus_unikey nerd_font openrgb terminator visual_code`) start **deselected on WSL** (still visible/toggleable, tagged `(desktop/native)`)
+4. `build_plan` discovers the two phases (`system update`, `base packages`) plus one entry per `scripts/programs/*.sh`. Defaults respect the target: programs in `NATIVE_ONLY_PROGRAMS` (`docker fan_control ibus_unikey nerd_font openrgb remmina terminator visual_code wezterm`) start **deselected on WSL** (still visible/toggleable, tagged `(desktop/native)`)
 5. Selection: `--all` accepts the target-aware defaults; an interactive TTY shows `select_menu` (↑/↓ or j/k to move, space to toggle, `a`/`n` all/none, `q` to abort, Enter to confirm); no TTY without `--all` errors out
 6. `apply_stow` (always) installs `stow` and applies symlinks
 7. `run_plan` runs the selected phases (`system_update`, `install_base`) and programs (via `run_step`); `apt upgrade`/`autoremove` run only if `system update` was selected. `install_base` also skips `chrome-gnome-shell`/`nvtop` on WSL.
@@ -77,6 +77,8 @@ Current scripts:
 | `openrgb.sh` | OpenRGB + i2c-tools; turns all RGB LEDs off now and via a boot-time systemd service (native-only). Per-device control: `.local/bin/rgb` / `docs/guides/rgb.md` |
 
 | `openrgb.sh` | OpenRGB + i2c-tools; turns all RGB LEDs off now and via a boot-time systemd service (native-only) |
+
+| `remmina.sh` | Remmina + RDP/VNC/secret plugins from the **Ubuntu archive** (native-only). Each package is checked separately, and only the missing ones get installed — the plugins are only *Recommends* of `remmina`, so they are listed explicitly. Deliberately avoids the `remmina-ppa-team/remmina-next` PPA, which had no `resolute` build, so its missing Release file broke every `apt update`. If that PPA source is present the script **warns and prints the removal command** but doesn't delete it. Hook: `REMMINA_SOURCES_DIR` |
 
 | `shellcheck.sh` | shellcheck (static analysis linter for the repo's shell scripts) |
 
