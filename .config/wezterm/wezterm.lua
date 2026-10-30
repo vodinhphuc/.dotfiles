@@ -15,10 +15,18 @@ local config = wezterm.config_builder()
 -- setting that decides whether Vietnamese typing works here at all. On Wayland
 -- WezTerm needs the compositor's zwp_text_input_v3 (mutter has it) -- it does
 -- NOT read GTK_IM_MODULE the way Terminator/VTE does, so ibus behaviour is not
--- guaranteed to match. If composing misbehaves, uncomment `enable_wayland` to
--- fall back to the X11/XIM path, which is the better-trodden route for ibus.
+-- guaranteed to match.
+--
+-- It did misbehave (2026-10-30, wezterm 20240203): a freshly opened window
+-- passed Telex keys through raw ("Taij" instead of "Tại") while ibus was
+-- correctly on Unikey, until the window was unfocused and refocused (Alt-Tab
+-- away and back). That refocus is the workaround.
+--
+-- Do NOT "fix" it with `enable_wayland = false`: tried the same day, and under
+-- XWayland Vietnamese stopped working entirely -- even though ibus-x11 was
+-- registered as the XIM server on :0, XMODIFIERS=@im=ibus was set and the
+-- engine was Unikey. This wezterm's XIM path simply does not compose with ibus.
 config.use_ime = true
--- config.enable_wayland = false
 
 -- ---------------------------------------------------------------------------
 -- Appearance
